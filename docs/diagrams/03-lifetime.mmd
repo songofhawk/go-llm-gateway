@@ -1,0 +1,17 @@
+sequenceDiagram
+    accTitle: 长流的名额持续到整个响应结束
+    accDescr: 收到HTTP头和首块时都不释放并发名额；客户端断开引发context取消，读取退出，关闭Body再归还名额。
+    participant C as 客户端
+    participant G as 网关
+    participant M as 模型服务
+    C->>G: 发起流式请求
+    Note over G: 占用 1 个 provider 名额
+    G->>M: 发送请求，携带 context
+    M-->>G: HTTP 响应头
+    Note over G: 继续占位
+    M-->>G: 第 1 块
+    G-->>C: 刷新给客户端
+    C-xG: 客户端断开
+    G--xM: context 通知取消
+    Note over G: 读写退出，执行 Body.Close
+    Note over G: 归还 provider 名额

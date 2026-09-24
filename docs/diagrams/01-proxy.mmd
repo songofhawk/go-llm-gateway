@@ -1,0 +1,7 @@
+flowchart LR
+    accTitle: 第一课只做一个中间转发站
+    accDescr: 客户端把问题交给代理，代理向本地Mock请求答案，再转发响应。本课不选择模型。
+    C["终端三：curl<br/>提出问题"] -->|HTTP 请求| G["终端二：Go 代理<br/>localhost:8081"]
+    G -->|固定路径转发| M["终端一：Mock LLM<br/>localhost:9090"]
+    M -->|模拟答案| G
+    G -->|转回响应| C

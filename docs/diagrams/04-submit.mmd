@@ -1,0 +1,19 @@
+sequenceDiagram
+    accTitle: 先确认任务入库，再分别响应和执行
+    accDescr: SQLite事务提交后，HTTP返回202与worker认领可以并行发生；202只确认任务已持久化，不代表任务完成。
+    participant C as 客户端
+    participant A as HTTP 入口
+    participant D as SQLite
+    participant W as worker
+    C->>A: POST /v1/jobs
+    A->>D: 检查容量，插入 queued
+    D-->>A: 事务提交成功
+    par 返回提交确认
+        A-->>C: 202 和任务 ID
+    and worker 独立执行
+        W->>D: 认领 queued，改为 running
+        D-->>W: 任务请求内容
+        Note over W: 调用模型，等待完整结果
+        W->>D: 保存结果，改为 completed
+    end
+    Note over C,W: 两个分支谁先推进，取决于实际调度

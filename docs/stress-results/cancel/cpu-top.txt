@@ -1,0 +1,22 @@
+File: gateway
+Type: cpu
+Time: 2026-09-24 16:22:42 CST
+Duration: 10.06s, Total samples = 1.82s (18.09%)
+Showing nodes accounting for 1.65s, 90.66% of 1.82s total
+Showing top 15 nodes out of 348
+      flat  flat%   sum%        cum   cum%
+     0.80s 43.96% 43.96%      0.80s 43.96%  syscall.rawsyscalln
+     0.21s 11.54% 55.49%      0.21s 11.54%  runtime.pthread_cond_signal
+     0.19s 10.44% 65.93%      0.19s 10.44%  runtime.pthread_cond_wait
+     0.16s  8.79% 74.73%      0.16s  8.79%  runtime.kevent
+     0.10s  5.49% 80.22%      0.10s  5.49%  runtime.usleep
+     0.03s  1.65% 81.87%      0.03s  1.65%  runtime.memclrNoHeapPointers
+     0.02s  1.10% 82.97%      0.05s  2.75%  modernc.org/memory.(*Allocator).mmap
+     0.02s  1.10% 84.07%      0.07s  3.85%  modernc.org/sqlite/lib._sqlite3MemMalloc
+     0.02s  1.10% 85.16%      0.02s  1.10%  runtime.madvise
+     0.02s  1.10% 86.26%      0.02s  1.10%  runtime.pthread_kill
+     0.02s  1.10% 87.36%      0.03s  1.65%  runtime.scanObjectsSmall
+     0.02s  1.10% 88.46%      0.02s  1.10%  runtime.stackpoolalloc
+     0.02s  1.10% 89.56%      0.03s  1.65%  runtime.tryDeferToSpanScan
+     0.01s  0.55% 90.11%      0.02s  1.10%  encoding/json.(*decodeState).object
+     0.01s  0.55% 90.66%      0.01s  0.55%  internal/abi.(*Type).IsDirectIface

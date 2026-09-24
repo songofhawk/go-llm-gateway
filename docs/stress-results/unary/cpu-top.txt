@@ -1,0 +1,23 @@
+File: gateway
+Type: cpu
+Time: 2026-09-24 16:14:48 CST
+Duration: 10.16s, Total samples = 4.45s (43.78%)
+Showing nodes accounting for 4.09s, 91.91% of 4.45s total
+Dropped 187 nodes (cum <= 0.02s)
+Showing top 15 nodes out of 173
+      flat  flat%   sum%        cum   cum%
+     2.91s 65.39% 65.39%      2.91s 65.39%  syscall.rawsyscalln
+     0.33s  7.42% 72.81%      0.33s  7.42%  runtime.pthread_cond_signal
+     0.26s  5.84% 78.65%      0.26s  5.84%  runtime.pthread_cond_wait
+     0.21s  4.72% 83.37%      0.21s  4.72%  runtime.usleep
+     0.18s  4.04% 87.42%      0.18s  4.04%  runtime.kevent
+     0.05s  1.12% 88.54%      0.06s  1.35%  runtime.scanObjectsSmall
+     0.03s  0.67% 89.21%      0.03s  0.67%  gcWriteBarrier
+     0.03s  0.67% 89.89%      0.03s  0.67%  runtime.pthread_kill
+     0.02s  0.45% 90.34%      0.03s  0.67%  modernc.org/memory.(*Allocator).mmap
+     0.02s  0.45% 90.79%      0.06s  1.35%  net/http.(*persistConn).roundTrip
+     0.01s  0.22% 91.01%      1.54s 34.61%  internal/poll.(*FD).Write
+     0.01s  0.22% 91.24%      0.03s  0.67%  runtime.(*mheap).allocSpan
+     0.01s  0.22% 91.46%      0.13s  2.92%  runtime.gcDrain
+     0.01s  0.22% 91.69%      0.10s  2.25%  runtime.mallocgc
+     0.01s  0.22% 91.91%      0.18s  4.04%  runtime.netpoll

@@ -1,0 +1,22 @@
+File: gateway
+Type: delay
+Time: 2026-09-24 16:22:58 CST
+Showing nodes accounting for 460.23s, 100% of 460.40s total
+Dropped 72 nodes (cum <= 2.30s)
+Showing top 15 nodes out of 32
+      flat  flat%   sum%        cum   cum%
+   460.23s   100%   100%    460.23s   100%  runtime.selectgo
+         0     0%   100%      6.93s  1.51%  database/sql.(*DB).QueryContext
+         0     0%   100%      6.93s  1.51%  database/sql.(*DB).QueryContext.func1
+         0     0%   100%      6.93s  1.51%  database/sql.(*DB).QueryRowContext (inline)
+         0     0%   100%      6.93s  1.51%  database/sql.(*DB).conn
+         0     0%   100%      6.93s  1.51%  database/sql.(*DB).query
+         0     0%   100%      6.93s  1.51%  database/sql.(*DB).retry
+         0     0%   100%    144.71s 31.43%  example.com/llm-gateway/internal/gateway.(*API).Handler.func2
+         0     0%   100%    144.71s 31.43%  example.com/llm-gateway/internal/gateway.(*API).chat
+         0     0%   100%    144.71s 31.43%  example.com/llm-gateway/internal/gateway.(*API).chat-fm
+         0     0%   100%    144.70s 31.43%  example.com/llm-gateway/internal/gateway.(*Gateway).Do
+         0     0%   100%    144.69s 31.43%  example.com/llm-gateway/internal/gateway.(*OpenAIProvider).Open
+         0     0%   100%    250.07s 54.32%  example.com/llm-gateway/internal/jobs.(*Store).Run.func1
+         0     0%   100%      4.79s  1.04%  example.com/llm-gateway/internal/jobs.(*Store).claimCompleted
+         0     0%   100%    250.07s 54.32%  example.com/llm-gateway/internal/jobs.(*Store).worker

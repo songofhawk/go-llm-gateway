@@ -1,0 +1,23 @@
+File: gateway
+Type: cpu
+Time: 2026-09-24 16:24:08 CST
+Duration: 10.14s, Total samples = 6.11s (60.28%)
+Showing nodes accounting for 5.58s, 91.33% of 6.11s total
+Dropped 246 nodes (cum <= 0.03s)
+Showing top 15 nodes out of 176
+      flat  flat%   sum%        cum   cum%
+     2.52s 41.24% 41.24%      2.52s 41.24%  syscall.rawsyscalln
+     0.98s 16.04% 57.28%      0.98s 16.04%  runtime.pthread_cond_signal
+     0.77s 12.60% 69.89%      0.77s 12.60%  runtime.usleep
+     0.66s 10.80% 80.69%      0.66s 10.80%  runtime.pthread_cond_wait
+     0.51s  8.35% 89.03%      0.51s  8.35%  runtime.kevent
+     0.04s  0.65% 89.69%      0.05s  0.82%  modernc.org/sqlite/lib._sqlite3VdbeRecordCompareWithSkip
+     0.03s  0.49% 90.18%      1.47s 24.06%  modernc.org/sqlite/lib._sqlite3VdbeExec
+     0.01s  0.16% 90.34%      0.04s  0.65%  modernc.org/memory.(*Allocator).UintptrMalloc
+     0.01s  0.16% 90.51%      0.29s  4.75%  modernc.org/sqlite/lib._btreeBeginTrans
+     0.01s  0.16% 90.67%      0.06s  0.98%  modernc.org/sqlite/lib._sqlite3Prepare
+     0.01s  0.16% 90.83%      0.08s  1.31%  runtime.lock2
+     0.01s  0.16% 91.00%      0.05s  0.82%  runtime.mallocgcSmallScanNoHeader
+     0.01s  0.16% 91.16%      2.16s 35.35%  runtime.mcall
+     0.01s  0.16% 91.33%      0.72s 11.78%  runtime.stealWork
+         0     0% 91.33%      0.31s  5.07%  bufio.(*Reader).Peek

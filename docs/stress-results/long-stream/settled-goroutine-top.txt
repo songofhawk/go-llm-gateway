@@ -1,0 +1,21 @@
+File: gateway
+Type: goroutine
+Time: 2026-09-24 16:17:01 CST
+Showing nodes accounting for 25, 100% of 25 total
+Showing top 15 nodes out of 47
+      flat  flat%   sum%        cum   cum%
+        22 88.00% 88.00%         22 88.00%  runtime.gopark
+         1  4.00% 92.00%          1  4.00%  runtime.goroutineProfileWithLabels
+         1  4.00% 96.00%          1  4.00%  runtime.sigNoteSleep
+         1  4.00%   100%          1  4.00%  syscall.syscalln
+         0     0%   100%          1  4.00%  database/sql.(*DB).connectionOpener
+         0     0%   100%          1  4.00%  example.com/llm-gateway/internal/jobs.(*Store).Run
+         0     0%   100%         16 64.00%  example.com/llm-gateway/internal/jobs.(*Store).Run.func1
+         0     0%   100%         16 64.00%  example.com/llm-gateway/internal/jobs.(*Store).worker
+         0     0%   100%          2  8.00%  internal/poll.(*FD).Accept
+         0     0%   100%          1  4.00%  internal/poll.(*FD).Read
+         0     0%   100%          2  8.00%  internal/poll.(*pollDesc).wait
+         0     0%   100%          2  8.00%  internal/poll.(*pollDesc).waitRead (inline)
+         0     0%   100%          1  4.00%  internal/poll.ignoringEINTRIO (inline)
+         0     0%   100%          2  8.00%  internal/poll.runtime_pollWait
+         0     0%   100%          1  4.00%  main.main

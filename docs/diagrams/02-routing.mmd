@@ -1,0 +1,9 @@
+flowchart TD
+    accTitle: 逻辑档次与真实模型分开
+    accDescr: 客户端指定cheap。配置第一组有两个可互换候选，按在途占比选择；第一组耗尽后才考虑备用组。
+    C["客户端：model=cheap"] --> T["查 cheap 的路由配置"]
+    T --> P["第一组：按在途占比选择"]
+    P --> A["primary-a<br/>模型 demo-small"]
+    P --> B["primary-b<br/>模型 demo-small"]
+    P -.->|本组候选耗尽| F["第二组：备用候选"]
+    F --> D["backup<br/>模型 demo-backup-small"]

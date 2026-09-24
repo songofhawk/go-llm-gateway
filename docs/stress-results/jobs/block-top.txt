@@ -1,0 +1,22 @@
+File: gateway
+Type: delay
+Time: 2026-09-24 16:24:22 CST
+Showing nodes accounting for 474.53s, 100% of 474.70s total
+Dropped 31 nodes (cum <= 2.37s)
+Showing top 15 nodes out of 40
+      flat  flat%   sum%        cum   cum%
+   436.66s 91.99% 91.99%    436.66s 91.99%  runtime.selectgo
+    37.86s  7.98%   100%     37.86s  7.98%  sync.(*Mutex).Lock (inline)
+         0     0%   100%      5.41s  1.14%  database/sql.(*DB).ExecContext
+         0     0%   100%      5.41s  1.14%  database/sql.(*DB).ExecContext.func1
+         0     0%   100%      8.69s  1.83%  database/sql.(*DB).QueryContext
+         0     0%   100%      8.69s  1.83%  database/sql.(*DB).QueryContext.func1
+         0     0%   100%      8.69s  1.83%  database/sql.(*DB).QueryRowContext (inline)
+         0     0%   100%     14.72s  3.10%  database/sql.(*DB).conn
+         0     0%   100%      5.41s  1.14%  database/sql.(*DB).exec
+         0     0%   100%      8.69s  1.83%  database/sql.(*DB).query
+         0     0%   100%     14.72s  3.10%  database/sql.(*DB).retry
+         0     0%   100%     39.45s  8.31%  example.com/llm-gateway/internal/gateway.(*API).Handler.func2
+         0     0%   100%     38.48s  8.11%  example.com/llm-gateway/internal/gateway.(*API).submit
+         0     0%   100%     38.48s  8.11%  example.com/llm-gateway/internal/gateway.(*API).submit-fm
+         0     0%   100%    187.35s 39.47%  example.com/llm-gateway/internal/gateway.(*Gateway).Do

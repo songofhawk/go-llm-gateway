@@ -1,0 +1,1 @@
+{"goroutines":57,"heap_alloc_bytes":4767640,"heap_inuse_bytes":7774208,"heap_objects":26994,"num_gc":107,"providers":{"a":{"active":0,"capacity":32,"peak":8},"b":{"active":0,"capacity":32,"peak":8}},"time":"2026-09-24T08:24:22.135282Z"}

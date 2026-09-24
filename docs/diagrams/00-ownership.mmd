@@ -1,0 +1,10 @@
+flowchart TD
+    accTitle: 谁拿到流式结果，谁负责关闭
+    accDescr: Do失败自行清理；成功交出流式Body时，调用者负责在正常结束或失败返回时Close，释放连接、定时器和名额。
+    A["调用 Gateway.Do"] --> B{"拿到流式 Body？"}
+    B -->|失败| C["Do 清理本次尝试"]
+    B -->|成功| D["立即登记 defer Body.Close"]
+    D --> E["持续读取并发给客户端"]
+    E --> F["正常结束、读写失败或取消"]
+    F --> G["函数返回，执行 Close"]
+    G --> H["关闭上游 Body · 取消计时器 · 归还名额"]

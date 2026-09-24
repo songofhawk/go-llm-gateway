@@ -1,0 +1,22 @@
+File: gateway
+Type: cpu
+Time: 2026-09-24 16:15:04 CST
+Duration: 10.07s, Total samples = 810ms ( 8.04%)
+Showing nodes accounting for 810ms, 100% of 810ms total
+Showing top 15 nodes out of 218
+      flat  flat%   sum%        cum   cum%
+     350ms 43.21% 43.21%      350ms 43.21%  syscall.rawsyscalln
+     150ms 18.52% 61.73%      150ms 18.52%  runtime.pthread_cond_wait
+     140ms 17.28% 79.01%      140ms 17.28%  runtime.pthread_cond_signal
+      50ms  6.17% 85.19%       50ms  6.17%  runtime.kevent
+      20ms  2.47% 87.65%       20ms  2.47%  modernc.org/sqlite/lib._sqlite3MemMalloc
+      10ms  1.23% 88.89%       10ms  1.23%  bufio.(*Writer).Write
+      10ms  1.23% 90.12%       10ms  1.23%  fmt.(*fmt).fmtInteger
+      10ms  1.23% 91.36%       10ms  1.23%  internal/runtime/atomic.(*UnsafePointer).Load
+      10ms  1.23% 92.59%       10ms  1.23%  modernc.org/sqlite/lib._sqlite3WhereBegin
+      10ms  1.23% 93.83%       10ms  1.23%  runtime.(*mspan).typePointersOfUnchecked
+      10ms  1.23% 95.06%       10ms  1.23%  runtime.(*unwinder).resolveInternal
+      10ms  1.23% 96.30%       10ms  1.23%  runtime.madvise
+      10ms  1.23% 97.53%       10ms  1.23%  runtime.memclrNoHeapPointers
+      10ms  1.23% 98.77%       10ms  1.23%  runtime.stackpoolalloc
+      10ms  1.23%   100%       10ms  1.23%  runtime.usleep

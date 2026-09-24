@@ -1,0 +1,22 @@
+File: gateway
+Type: delay
+Time: 2026-09-24 16:22:58 CST
+Showing nodes accounting for 120.48ms, 100% of 120.48ms total
+Dropped 179 nodes (cum <= 0.60ms)
+Showing top 15 nodes out of 150
+      flat  flat%   sum%        cum   cum%
+   64.51ms 53.55% 53.55%    64.51ms 53.55%  runtime.unlock (inline)
+   52.14ms 43.28% 96.83%    52.20ms 43.32%  sync.(*Mutex).Unlock (inline)
+    3.82ms  3.17%   100%     3.82ms  3.17%  runtime._LostContendedRuntimeLock
+         0     0%   100%     0.98ms  0.81%  bufio.(*Reader).ReadSlice
+         0     0%   100%     0.99ms  0.82%  bufio.(*Reader).fill
+         0     0%   100%     1.12ms  0.93%  context.(*cancelCtx).cancel
+         0     0%   100%    17.81ms 14.78%  context.(*cancelCtx).propagateCancel
+         0     0%   100%    17.80ms 14.77%  context.WithCancel
+         0     0%   100%     1.12ms  0.93%  context.WithCancel.func1
+         0     0%   100%     1.03ms  0.86%  context.removeChild
+         0     0%   100%    17.80ms 14.77%  context.withCancel (inline)
+         0     0%   100%     1.33ms  1.10%  database/sql.(*DB).QueryContext
+         0     0%   100%     1.33ms  1.10%  database/sql.(*DB).QueryContext.func1
+         0     0%   100%     1.33ms  1.10%  database/sql.(*DB).QueryRowContext
+         0     0%   100%     1.32ms  1.10%  database/sql.(*DB).conn

@@ -1,0 +1,21 @@
+{
+  "endpoints": [
+    {"name":"primary-a", "base_url":"http://localhost:9090/v1", "api_key_env":"", "capacity":64},
+    {"name":"primary-b", "base_url":"http://localhost:9091/v1", "api_key_env":"", "capacity":64},
+    {"name":"backup", "base_url":"http://localhost:9092/v1", "api_key_env":"", "capacity":32}
+  ],
+  "routes": {
+    "cheap": [
+      [{"provider":"primary-a","model":"demo-small"},{"provider":"primary-b","model":"demo-small"}],
+      [{"provider":"backup","model":"demo-backup-small"}]
+    ],
+    "balanced": [
+      [{"provider":"primary-a","model":"demo-medium"},{"provider":"primary-b","model":"demo-medium"}],
+      [{"provider":"backup","model":"demo-backup-medium"}]
+    ],
+    "powerful": [
+      [{"provider":"primary-a","model":"demo-large"},{"provider":"primary-b","model":"demo-large"}],
+      [{"provider":"backup","model":"demo-backup-large"}]
+    ]
+  }
+}

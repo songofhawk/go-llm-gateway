@@ -1,0 +1,8 @@
+flowchart TD
+    accTitle: 压测产生负载，pprof解释网关内部消耗
+    accDescr: 负载进程经业务端口请求独立网关进程，网关请求两个独立Mock进程。pprof客户端只从网关独立诊断端口采样。
+    L["负载进程：loadtest<br/>统计延迟与完成数"] -->|业务端口| G["网关进程<br/>路由、长流、异步任务"]
+    G --> A["Mock A 进程<br/>可配置延迟与故障"]
+    G --> B["Mock B 进程<br/>可配置延迟与故障"]
+    P["pprof 采集端"] -.->|独立诊断端口，只采网关| G
+    P --> F["CPU · heap · goroutine<br/>block · mutex"]

@@ -1,0 +1,22 @@
+File: gateway
+Type: alloc_space
+Time: 2026-09-24 16:15:01 CST
+Showing nodes accounting for 270.07MB, 63.44% of 425.70MB total
+Dropped 117 nodes (cum <= 2.13MB)
+Showing top 15 nodes out of 112
+      flat  flat%   sum%        cum   cum%
+   29.51MB  6.93%  6.93%    31.51MB  7.40%  io.ReadAll
+   27.51MB  6.46% 13.39%    28.51MB  6.70%  net/textproto.readMIMEHeader
+   26.01MB  6.11% 19.50%    26.01MB  6.11%  net/textproto.MIMEHeader.Set (inline)
+   24.50MB  5.76% 25.26%    31.50MB  7.40%  context.(*cancelCtx).propagateCancel
+   24.01MB  5.64% 30.90%    24.01MB  5.64%  net/http.Header.Clone (inline)
+   21.50MB  5.05% 35.95%    38.01MB  8.93%  encoding/json.Unmarshal
+   18.50MB  4.35% 40.30%   153.03MB 35.95%  example.com/llm-gateway/internal/gateway.(*OpenAIProvider).Open
+      14MB  3.29% 43.59%    46.01MB 10.81%  net/http.readRequest
+      14MB  3.29% 46.88%    22.50MB  5.29%  net/http.(*persistConn).roundTrip
+   13.50MB  3.17% 50.05%    13.50MB  3.17%  context.(*cancelCtx).Done
+   12.50MB  2.94% 52.98%    12.50MB  2.94%  net/url.parse
+      12MB  2.82% 55.80%       12MB  2.82%  time.newTimer
+   11.50MB  2.70% 58.51%    11.50MB  2.70%  net/http.setupRewindBody (inline)
+   10.50MB  2.47% 60.97%    10.50MB  2.47%  reflect.mapassign_faststr0
+   10.50MB  2.47% 63.44%    15.50MB  3.64%  net/http.NewRequestWithContext

@@ -1,0 +1,23 @@
+File: gateway
+Type: cpu
+Time: 2026-09-24 16:28:18 CST
+Duration: 10.08s, Total samples = 2.11s (20.92%)
+Showing nodes accounting for 1.87s, 88.63% of 2.11s total
+Dropped 106 nodes (cum <= 0.01s)
+Showing top 15 nodes out of 184
+      flat  flat%   sum%        cum   cum%
+     0.94s 44.55% 44.55%      0.94s 44.55%  syscall.rawsyscalln
+     0.24s 11.37% 55.92%      0.24s 11.37%  runtime.pthread_cond_wait
+     0.21s  9.95% 65.88%      0.21s  9.95%  runtime.pthread_cond_signal
+     0.17s  8.06% 73.93%      0.17s  8.06%  runtime.kevent
+     0.16s  7.58% 81.52%      0.16s  7.58%  runtime.usleep
+     0.02s  0.95% 82.46%      0.02s  0.95%  context.(*cancelCtx).propagateCancel
+     0.02s  0.95% 83.41%      0.06s  2.84%  modernc.org/memory.(*Allocator).mmap
+     0.02s  0.95% 84.36%      0.02s  0.95%  runtime.memclrNoHeapPointers
+     0.02s  0.95% 85.31%      0.02s  0.95%  runtime.nanotime1
+     0.02s  0.95% 86.26%      0.02s  0.95%  runtime.releasem (inline)
+     0.01s  0.47% 86.73%      0.02s  0.95%  modernc.org/sqlite/lib._sqlite3DbStrDup
+     0.01s  0.47% 87.20%      0.03s  1.42%  modernc.org/sqlite/lib._sqlite3ExprListDup
+     0.01s  0.47% 87.68%      0.05s  2.37%  modernc.org/sqlite/lib._yy_reduce
+     0.01s  0.47% 88.15%      0.05s  2.37%  net/http.(*Transport).roundTrip
+     0.01s  0.47% 88.63%      0.03s  1.42%  net/http.(*chunkWriter).writeHeader

@@ -1,0 +1,17 @@
+File: gateway
+Type: delay
+Time: 2026-09-24 16:24:22 CST
+Showing nodes accounting for 33.62s, 99.77% of 33.69s total
+Dropped 265 nodes (cum <= 0.17s)
+      flat  flat%   sum%        cum   cum%
+    33.62s 99.77% 99.77%     33.62s 99.78%  sync.(*Mutex).Unlock
+         0     0% 99.77%     33.62s 99.78%  example.com/llm-gateway/internal/gateway.(*API).Handler.func2
+         0     0% 99.77%     33.62s 99.78%  example.com/llm-gateway/internal/gateway.(*API).submit
+         0     0% 99.77%     33.61s 99.76%  example.com/llm-gateway/internal/gateway.(*API).submit-fm
+         0     0% 99.77%     33.62s 99.77%  example.com/llm-gateway/internal/jobs.(*Store).Submit
+         0     0% 99.77%     33.62s 99.78%  net/http.(*ServeMux).ServeHTTP
+         0     0% 99.77%     33.62s 99.77%  net/http.(*Server).Serve.gowrap3
+         0     0% 99.77%     33.62s 99.79%  net/http.(*conn).serve
+         0     0% 99.77%     33.62s 99.78%  net/http.HandlerFunc.ServeHTTP
+         0     0% 99.77%     33.62s 99.78%  net/http.serverHandler.ServeHTTP
+         0     0% 99.77%     33.61s 99.77%  runtime.deferreturn

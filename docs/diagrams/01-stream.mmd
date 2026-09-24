@@ -1,0 +1,20 @@
+sequenceDiagram
+    accTitle: 一次性返回与流式返回
+    accDescr: 一次性等完整答案后返回JSON，流式在同一个请求中多次写出和刷新数据。
+    participant C as 客户端
+    participant G as 网关
+    participant M as Mock LLM
+    C->>G: stream=false
+    G->>M: 请求生成
+    Note over M: 生成完整答案
+    M-->>G: 完整 JSON
+    G-->>C: 一次性交付
+    C->>G: stream=true
+    G->>M: 请求流式生成
+    M-->>G: 第 1 块
+    G-->>C: 立即刷新第 1 块
+    Note over C,M: 请求还没有结束
+    M-->>G: 第 2 块
+    G-->>C: 立即刷新第 2 块
+    M-->>G: DONE 结束事件
+    G-->>C: 转发结束事件

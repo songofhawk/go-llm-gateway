@@ -1,0 +1,7 @@
+flowchart TD
+    accTitle: 请求结束后为什么还有goroutine
+    accDescr: 实测长流场景从基线25到负载中284，排空后153，等95秒连接池空闲回收后回到25。一次采样不代表永远无泄漏。
+    A["开始前<br/>goroutine 25 · active 0"] --> B["64 条长流运行中<br/>goroutine 284 · active 64"]
+    B --> C["请求排空<br/>goroutine 153 · active 0"]
+    C -->|再等 95 秒| D["空闲连接回收后<br/>goroutine 25 · active 0"]
+    C -.-> E["仍有连接池读写协程<br/>不能立即判成泄漏"]

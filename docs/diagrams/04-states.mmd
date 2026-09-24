@@ -1,0 +1,19 @@
+stateDiagram-v2
+accTitle: 任务执行、结果保存与崩溃恢复状态
+accDescr: running 崩溃后重新排队并可能重做上游调用；processing 崩溃后回到已保存结果并只重做后处理；failed 不自动重试。
+    state "queued：已排队" as queued
+    state "running：调用模型" as running
+    state "completed：结果已保存" as completed
+    state "processing：处理结果" as processing
+    state "done：全部完成" as done
+    state "failed：执行失败" as failed
+    [*] --> queued
+    queued --> running: worker 认领
+    running --> completed: 上游成功，保存结果
+    running --> failed: 执行报错
+    completed --> processing: 认领已保存结果
+    processing --> done: 后处理完成
+    running --> queued: 重启后重新执行
+    processing --> completed: 重启后复用结果
+    done --> [*]
+    failed --> [*]
