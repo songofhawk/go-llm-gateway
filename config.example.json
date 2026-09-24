@@ -5,7 +5,7 @@
     {"name":"backup", "base_url":"http://localhost:9092/v1", "api_key_env":"", "capacity":32}
   ],
   "routes": {
-    "cheap": [
+    "economy": [
       [{"provider":"primary-a","model":"demo-small"},{"provider":"primary-b","model":"demo-small"}],
       [{"provider":"backup","model":"demo-backup-small"}]
     ],

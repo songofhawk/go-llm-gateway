@@ -55,7 +55,7 @@ go run ./cmd/gateway -config config.example.json -rate 2 -burst 3
 ```sh
 curl -i http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"cheap","messages":[{"role":"user","content":"hello"}]}'
+  -d '{"model":"economy","messages":[{"role":"user","content":"hello"}]}'
 ```
 
 也可以用已有压测客户端快速观察状态码分布：

@@ -222,7 +222,7 @@ func doRequest(client *http.Client, base string, o options, s *counters, jobMu *
 	if o.mode == "jobs" {
 		path = "/v1/jobs"
 	}
-	body, _ := json.Marshal(map[string]any{"model": "cheap", "messages": []any{map[string]string{"role": "user", "content": "hi"}}, "stream": stream})
+	body, _ := json.Marshal(map[string]any{"model": "economy", "messages": []any{map[string]string{"role": "user", "content": "hi"}}, "stream": stream})
 	ctx, cancel := context.WithTimeout(context.Background(), o.timeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, base+path, bytes.NewReader(body))

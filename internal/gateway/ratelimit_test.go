@@ -195,7 +195,7 @@ func TestRateLimitDoesNotInterruptAdmittedStream(t *testing.T) {
 	defer s.Close()
 	defer close(finish)
 	// defer 的顺序确保失败断言也会解除模拟上游等待，不让测试清理卡住。
-	first, err := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"cheap","messages":[{}],"stream":true}`))
+	first, err := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"economy","messages":[{}],"stream":true}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +261,7 @@ func TestRateLimitFallbackConsumesOneToken(t *testing.T) {
 	s := httptest.NewServer(a.Handler())
 	defer s.Close()
 	for _, want := range []int{200, 429} {
-		res, err := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"cheap","messages":[{}]}`))
+		res, err := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"economy","messages":[{}]}`))
 		if err != nil {
 			t.Fatal(err)
 		}

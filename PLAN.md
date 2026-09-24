@@ -4,7 +4,7 @@
 
 ## 核心抽象
 
-- 模型档次：cheap / balanced / powerful 与真实模型 ID 分离，通过配置映射。
+- 模型档次：economy / balanced / powerful 与真实模型 ID 分离，通过配置映射。
 - Provider：封装供应商协议、认证和 HTTP 客户端复用。
 - 调用编排：在容量和时间预算内选择候选，执行显式 fallback。
 - 后台任务：分离提交、执行、结果持久化和后处理。

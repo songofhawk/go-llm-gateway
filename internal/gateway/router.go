@@ -19,7 +19,7 @@ type backend struct {
 }
 
 // Gateway 的锁只保护短小的计数修改，绝不跨网络调用持有锁。
-// provider 在所有模型路由间共用容量，防止 cheap/powerful 各自超卖同一端点。
+// provider 在所有模型路由间共用容量，防止 economy/powerful 各自超卖同一端点。
 type Gateway struct {
 	mu       sync.Mutex
 	backends map[string]*backend
@@ -42,7 +42,7 @@ func New(config Config, providers map[string]Provider, times Timeouts) (*Gateway
 		}
 		g.backends[e.Name] = &backend{provider: providers[e.Name], capacity: e.Capacity}
 	}
-	for _, tier := range []string{"cheap", "balanced", "powerful"} {
+	for _, tier := range []string{"economy", "balanced", "powerful"} {
 		groups := config.Routes[tier]
 		if len(groups) == 0 {
 			return nil, fmt.Errorf("missing route: %s", tier)

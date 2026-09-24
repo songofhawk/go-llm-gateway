@@ -36,7 +36,7 @@ cat > "$OUT/config.json" <<JSON
  {"name":"a","base_url":"$A/v1","capacity":32},
  {"name":"b","base_url":"$B/v1","capacity":32}],
  "routes":{
-  "cheap":[[{"provider":"a","model":"mock-small"},{"provider":"b","model":"mock-small"}]],
+  "economy":[[{"provider":"a","model":"mock-small"},{"provider":"b","model":"mock-small"}]],
   "balanced":[[{"provider":"a","model":"mock-medium"},{"provider":"b","model":"mock-medium"}]],
   "powerful":[[{"provider":"a","model":"mock-large"},{"provider":"b","model":"mock-large"}]]}}
 JSON

@@ -2,7 +2,7 @@
 
 这是一个循序渐进的 Go 大模型网关实践项目。从最小代理开始，逐步实现模型路由、流式传输、并发管理、持久化任务、性能分析和请求限流，理解每个设计决策及其取舍。
 
-项目可独立运行，内置 Mock LLM，无需模型账号即可完成全部教程与本地实验。
+项目可独立运行，内置 Mock LLM，无需模型账号即可完成全部教程与本地实验。源码仓库：[songofhawk/go-llm-gateway](https://github.com/songofhawk/go-llm-gateway)。
 
 ## 先看整体：同一个网关，两种交付方式
 
@@ -65,7 +65,7 @@ go run ./cmd/gateway -config config.example.json
 ```sh
 curl -sS http://localhost:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"cheap","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":false}'
+  -d '{"model":"economy","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":false}'
 ```
 
 流式调用只改 `stream`，同时给 curl 加 `-N` 关闭客户端缓冲：
@@ -100,7 +100,7 @@ go run ./cmd/gateway -config config.local.json
 
 配置结构：`endpoints` 定义供应商实例和总并发容量；`routes` 的每个档次是“候选组的列表”。同组按占用比例最小选择，组间按顺序 fallback。相同供应商可以映射不同模型，但共享并发容量。
 
-客户端的 `model` 是 `cheap`、`balanced` 或 `powerful`，省略时默认 `balanced`。`messages`、`tools`、`temperature` 等其余字段透传。流式输出保留供应商 SSE，必须以完整 `data: [DONE]` 事件结束。响应头 `X-Gateway-Provider` / `X-Gateway-Model` 展示实际选择。
+客户端的 `model` 是 `economy`（经济型）、`balanced`（均衡型）或 `powerful`（高能力型），省略时默认 `balanced`。这些名称表示路由档次，具体供应商和模型由配置映射。`messages`、`tools`、`temperature` 等其余字段透传。流式输出保留供应商 SSE，必须以完整 `data: [DONE]` 事件结束。响应头 `X-Gateway-Provider` / `X-Gateway-Model` 展示实际选择。
 
 模型兼容性由配置维护：fallback 模型也必须支持请求中的工具、多模态、推理参数。网关不偷偷删除这些参数，也不推断供应商模型能力。
 

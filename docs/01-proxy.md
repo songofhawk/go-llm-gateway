@@ -50,7 +50,7 @@ curl -i http://localhost:8081/v1/chat/completions \
   -d '{"model":"demo-small","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":false}'
 ```
 
-你应收到 HTTP 200 和一个完整 JSON，里面的模型文本是固定的 `x` 字符。它证明“请求转发成功”，不证明模型真的会回答问题。此处 `model` 由上游解释，代理不会选择模型；第 2 步才引入 cheap / balanced / powerful。
+你应收到 HTTP 200 和一个完整 JSON，里面的模型文本是固定的 `x` 字符。它证明“请求转发成功”，不证明模型真的会回答问题。此处 `model` 由上游解释，代理不会选择模型；第 2 步才引入 economy / balanced / powerful。
 
 ## 3. 为什么流式看起来更快？
 

@@ -19,7 +19,7 @@ var (
 )
 
 // Request 保留工具调用、多模态等原始 JSON 字段，只解析网关必须理解的字段。
-// model 是逻辑档次 cheap / balanced / powerful，真正的模型 ID 由配置决定。
+// model 是逻辑档次 economy / balanced / powerful，真正的模型 ID 由配置决定。
 type Request struct {
 	Tier   string
 	Stream bool
@@ -40,7 +40,7 @@ func ParseRequest(data []byte) (Request, error) {
 			return r, fmt.Errorf("%w: model must be a tier", ErrInvalid)
 		}
 	}
-	if r.Tier != "cheap" && r.Tier != "balanced" && r.Tier != "powerful" {
+	if r.Tier != "economy" && r.Tier != "balanced" && r.Tier != "powerful" {
 		return r, fmt.Errorf("%w: unknown model tier", ErrInvalid)
 	}
 	if v, ok := r.Fields["stream"]; ok {

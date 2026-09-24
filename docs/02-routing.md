@@ -1,29 +1,29 @@
 # 02：把“想要什么模型”和“由谁执行”分开
 
-模型档次 cheap / balanced / powerful 表达能力或成本需求，Provider 负责供应商协议。将两者分开后，客户端可以保持逻辑档次不变，由配置选择实际执行的供应商和模型。
+模型档次 economy（经济型）/ balanced（均衡型）/ powerful（高能力型）表达成本与能力需求，Provider 负责供应商协议。名称只表示网关的逻辑档次，实际模型由配置映射。将两者分开后，客户端可以保持逻辑档次不变，由配置选择实际执行的供应商和模型。
 
-## 先看图：cheap 是需求档次，不是某一家模型的名字
+## 先看图：economy 是需求档次，不是某一家模型的名字
 
 同一个问题“介绍一下 Go”，可以交给不同供应商。客户端只说自己需要哪个档次，由网关配置决定实际模型。
 
-![cheap先选择主候选组，只有允许fallback且主组耗尽才使用备用组](assets/02-routing.svg)
+![economy先选择主候选组，只有允许fallback且主组耗尽才使用备用组](assets/02-routing.svg)
 
 [查看 Mermaid 源图](diagrams/02-routing.mmd)
 
 **读图例子（示意数值）：**A 占用 10/20 个名额，B 占用 3/20 个名额，网关会倾向 B。两者都属于第一组，不是每次同时调用两个模型。只有允许 fallback 且该组没有剩余可用候选时，才考虑下一组。
 
-客户端发出 `model=cheap`；上游收到的是 `model=demo-small`。`Provider` 负责“怎样向这家服务发请求”，`Target` 则把“这家服务”和“这个真实模型”绑定在一起。
+客户端发出 `model=economy`；上游收到的是 `model=demo-small`。`Provider` 负责“怎样向这家服务发请求”，`Target` 则把“这家服务”和“这个真实模型”绑定在一起。
 
 ## 沿请求走一遍
 
-客户端发送 `model=cheap`。`ParseRequest` 读取这个逻辑档次；`Gateway.Do` 查 cheap 的候选组；`acquire` 选一个尚有容量的目标；`OpenAIProvider.Open` 将请求里的 model 换成该目标的实际模型 ID，随后发送。
+客户端发送 `model=economy`。`ParseRequest` 读取这个逻辑档次；`Gateway.Do` 查 economy 的候选组；`acquire` 选一个尚有容量的目标；`OpenAIProvider.Open` 将请求里的 model 换成该目标的实际模型 ID，随后发送。
 
 请求其余字段用 `json.RawMessage` 保留，避免因为只定义了 content 字符串就丢失多模态、工具参数或供应商扩展。每次尝试都会复制字段 map，不能修改共享请求：否则失败重试和并发调用可能串模型。
 
 示例配置的含义：
 
 ```json
-"cheap": [
+"economy": [
   [{"provider":"primary-a","model":"demo-small"},
    {"provider":"primary-b","model":"demo-small"}],
   [{"provider":"backup","model":"demo-backup-small"}]
@@ -74,6 +74,6 @@
 
 运行 `go test -v ./internal/gateway -run 'TestFallback|TestAttempt|TestLoadBalance|TestProvider'`。然后修改备用组的模型 ID，观察 `X-Gateway-Model`。把两个主端点都以 `-status 503` 启动，验证备用端点被选中；改成 400，验证没有自动换模型。
 
-语义自动分档是可选扩展。已经明确的 cheap/balanced/powerful、健康状态和容量由代码决定；若加入根据自然语言选择档次的分类器，需要单独评估误判，并在分类失败或置信不足时使用明确的默认档次。
+语义自动分档是可选扩展。已经明确的 economy/balanced/powerful、健康状态和容量由代码决定；若加入根据自然语言选择档次的分类器，需要单独评估误判，并在分类失败或置信不足时使用明确的默认档次。
 
 下一步：[第 3 步：并发与生命周期](03-concurrency.md)。

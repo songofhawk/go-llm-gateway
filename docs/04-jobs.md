@@ -31,7 +31,7 @@ go run ./cmd/gateway \
   -queue 8
 ```
 
-如果配置文件中的 `api_key_env` 指向了环境变量，先在当前 shell 设置它。默认地址只监听本机。另开终端提交非流式请求；`model` 使用 `cheap`、`balanced` 或 `powerful` 逻辑档次：
+如果配置文件中的 `api_key_env` 指向了环境变量，先在当前 shell 设置它。默认地址只监听本机。另开终端提交非流式请求；`model` 使用 `economy`、`balanced` 或 `powerful` 逻辑档次：
 
 ```sh
 curl -i http://localhost:8080/v1/jobs \

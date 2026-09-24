@@ -26,7 +26,7 @@ func (f providerFunc) Open(c context.Context, m string, r Request) (io.ReadClose
 }
 func request(t testing.TB, stream bool) Request {
 	t.Helper()
-	r, e := ParseRequest([]byte(fmt.Sprintf(`{"model":"cheap","messages":[{}],"stream":%t}`, stream)))
+	r, e := ParseRequest([]byte(fmt.Sprintf(`{"model":"economy","messages":[{}],"stream":%t}`, stream)))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -38,7 +38,7 @@ func testGateway(t testing.TB, ps map[string]Provider, groups [][]Target, capaci
 	for name := range ps {
 		cfg.Endpoints = append(cfg.Endpoints, Endpoint{Name: name, Capacity: capacity})
 	}
-	for _, tier := range []string{"cheap", "balanced", "powerful"} {
+	for _, tier := range []string{"economy", "balanced", "powerful"} {
 		cfg.Routes[tier] = groups
 	}
 	g, e := New(cfg, ps, times)
@@ -115,7 +115,7 @@ func TestProviderMappingAndCredentialIsolation(t *testing.T) {
 	g := testGateway(t, map[string]Provider{"p": p}, oneGroup("p"), 1, times)
 	s := httptest.NewServer(NewAPI(g, nil, "client-secret", 1, 1).Handler())
 	defer s.Close()
-	req, _ := http.NewRequest("POST", s.URL+"/v1/chat/completions", strings.NewReader(`{"model":"cheap","messages":[{}],"tools":[]}`))
+	req, _ := http.NewRequest("POST", s.URL+"/v1/chat/completions", strings.NewReader(`{"model":"economy","messages":[{}],"tools":[]}`))
 	req.Header.Set("Authorization", "Bearer client-secret")
 	resp, e := http.DefaultClient.Do(req)
 	if e != nil {
@@ -268,7 +268,7 @@ func TestStreamingFlushAndDisconnect(t *testing.T) {
 	defer s.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	req, _ := http.NewRequestWithContext(ctx, "POST", s.URL+"/v1/chat/completions", strings.NewReader(`{"model":"cheap","messages":[{}],"stream":true}`))
+	req, _ := http.NewRequestWithContext(ctx, "POST", s.URL+"/v1/chat/completions", strings.NewReader(`{"model":"economy","messages":[{}],"stream":true}`))
 	resp, e := http.DefaultClient.Do(req)
 	if e != nil {
 		t.Fatal(e)
@@ -314,7 +314,7 @@ func TestTruncatedStreamNeverFallsBack(t *testing.T) {
 	g := testGateway(t, map[string]Provider{"p": p, "b": b}, fallbackGroups(), 1, ts)
 	s := httptest.NewServer(NewAPI(g, nil, "", 1, 1).Handler())
 	defer s.Close()
-	resp, e := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"cheap","messages":[{}],"stream":true}`))
+	resp, e := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"economy","messages":[{}],"stream":true}`))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -411,7 +411,7 @@ func TestAsyncHTTPIntegration(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- store.Run(ctx, 1, g.ExecuteJob) }()
 	defer func() { cancel(); <-done }()
-	resp, e := http.Post(s.URL+"/v1/jobs", "application/json", strings.NewReader(`{"model":"cheap","messages":[{}]}`))
+	resp, e := http.Post(s.URL+"/v1/jobs", "application/json", strings.NewReader(`{"model":"economy","messages":[{}]}`))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -539,7 +539,7 @@ func TestCompleteStreamStopsAtDone(t *testing.T) {
 	g := testGateway(t, map[string]Provider{"p": p}, oneGroup("p"), 1, ts)
 	s := httptest.NewServer(NewAPI(g, nil, "", 1, 1).Handler())
 	defer s.Close()
-	resp, e := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"cheap","messages":[{}],"stream":true}`))
+	resp, e := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"economy","messages":[{}],"stream":true}`))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -592,7 +592,7 @@ func TestSlowDownstreamReleasesResources(t *testing.T) {
 	g := testGateway(t, map[string]Provider{"p": p}, oneGroup("p"), 1, ts)
 	s := httptest.NewServer(NewAPI(g, nil, "", 1, 1).Handler())
 	defer s.Close()
-	resp, e := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"cheap","messages":[{}],"stream":true}`))
+	resp, e := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"economy","messages":[{}],"stream":true}`))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -656,7 +656,7 @@ func TestShutdownCancelsActiveStreams(t *testing.T) {
 	s.Config.BaseContext = func(net.Listener) context.Context { return ctx }
 	s.Start()
 	defer s.Close()
-	resp, err := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"cheap","messages":[{}],"stream":true}`))
+	resp, err := http.Post(s.URL+"/v1/chat/completions", "application/json", strings.NewReader(`{"model":"economy","messages":[{}],"stream":true}`))
 	if err != nil {
 		t.Fatal(err)
 	}
