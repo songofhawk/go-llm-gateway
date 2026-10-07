@@ -1,5 +1,7 @@
 # 第 6 步：Mock LLM、压力测试与 pprof
 
+**本课独立代码：[lessons/06-pprof](../lessons/06-pprof/README.md)。**先在仓库根目录执行 `cd lessons/06-pprof`，再运行本文命令。此目录有自己的 Go 模块和 Mock，所有测试针对本课源码。
+
 压测工具负责产生负载，pprof 负责解释网关把 CPU、内存、goroutine 和锁耗在哪里。不能用 pprof 的 CPU 样本数代替请求吞吐，也不能把模型生成等待算成网关计算时间。
 
 ## 先分清：谁发请求，谁被测量？
@@ -14,7 +16,7 @@
 
 ## 直接复现
 
-安装 Go 后，在项目根目录运行：
+安装 Go 后，在本课目录运行：
 
 ```sh
 bash scripts/stress.sh
@@ -66,7 +68,7 @@ go run ./cmd/gateway -config config.example.json -pprof localhost:6060
 go run ./cmd/loadtest -url http://localhost:8080 -mode stream -duration 15s -concurrency 32 -output result.json
 ```
 
-示例配置引用三个 Mock 端点，完整手工运行仍需按 README 启动另外两个，或者复制配置只保留一个端点并同步修改全部档次路由。
+示例配置引用三个 Mock 端点，完整手工运行仍需按 README 启动另外两个，或者复制本课配置只保留一个端点并同步修改全部档次路由。
 
 手工测取消时，在支持 h2c 的 Mock 和网关上加 `-h2c`，并为配置中的对应 endpoint 增加 `"h2c": true`，负载端使用 `-mode cancel -h2c -fail-on-error`。所有链路都需要支持 HTTP/2，单独把客户端改为 HTTP/2 仍会在 HTTP/1 上游制造重建连接。对真实 HTTPS 服务使用 TLS 协商的 HTTP/2；仅支持 HTTP/1 的上游在持续取消时仍需控制到达速率和负载机连接资源。
 

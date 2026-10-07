@@ -65,12 +65,14 @@ defer result.Body.Close()
 
 ## 建议第一次读代码的顺序
 
+[独立课程目录](../lessons/README.md) 已按步骤拆分。第 1 课只读 `lessons/01-proxy`；第 2 课只读 `lessons/02-routing`，之后逐课切换。下面同名文件先在当前课程目录里查找。
+
 1. `lessons/01-proxy/main.go`：先让 HTTP 转发跑通。
 2. `internal/gateway/types.go`：看输入、接口和配置类型。
 3. `provider.go`：顺着一次 HTTP 请求看 context 和 body。
 4. `router.go`：看选择、占位、失败、释放。
 5. `http.go`：看 SSE 刷新、客户端取消、容量拒绝。
-6. `internal/jobs/jobs.go`：看后台生命周期与持久化。
+6. 第 4 课起的 `internal/jobs/jobs.go`：看后台生命周期与持久化。
 7. `cmd/gateway/main.go`：回头看这些小模块如何组装。
 
 每读完一个模块，运行对应测试，再故意注释掉一处资源释放，观察哪项测试失败；实验后恢复改动。

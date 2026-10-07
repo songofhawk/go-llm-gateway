@@ -1,5 +1,7 @@
 # 第 7 步：用令牌桶控制新请求速率
 
+**本课独立代码：[lessons/07-rate-limiting](../lessons/07-rate-limiting/README.md)。**先在仓库根目录执行 `cd lessons/07-rate-limiting`，再运行本文命令。此目录有自己的 Go 模块和 Mock，所有测试针对本课源码。
+
 前面的并发限制控制“现在有多少请求还没结束”；这一课控制“单位时间内有多少新请求可以进入”。网关用一个令牌桶快速放行或拒绝请求，不会让请求排队等待令牌。
 
 ## 先看令牌怎样补充和消耗
@@ -16,7 +18,7 @@
 
 ## 开启限流
 
-在 `go-llm-gateway` 目录运行：
+在 `go-llm-gateway/lessons/07-rate-limiting` 目录运行：
 
 ```sh
 go run ./cmd/gateway -config config.example.json -rate 2 -burst 3
@@ -69,7 +71,7 @@ go run ./cmd/loadtest -url http://localhost:8080 -mode unary \
 
 ## 对照代码与自动验证
 
-[ratelimit.go](../internal/gateway/ratelimit.go) 中的 `Allow` 对应第一张图的判断；[http.go](../internal/gateway/http.go) 中的 `API.Handler` 对应第二张图的两道门。锁只包住补充、检查与扣除令牌，不会拿着锁等模型回复。
+[ratelimit.go](../lessons/07-rate-limiting/internal/gateway/ratelimit.go) 中的 `Allow` 对应第一张图的判断；[http.go](../lessons/07-rate-limiting/internal/gateway/http.go) 中的 `API.Handler` 对应第二张图的两道门。锁只包住补充、检查与扣除令牌，不会拿着锁等模型回复。
 
 ```sh
 go test -race -v ./internal/gateway -run TestRateLimit

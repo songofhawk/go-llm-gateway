@@ -1,5 +1,7 @@
 # 第 1 步：让一个问题经过 Go 代理
 
+**本课独立代码：[lessons/01-proxy](../lessons/01-proxy/README.md)。**先在仓库根目录执行 `cd lessons/01-proxy`，再运行本文命令。此目录有自己的 Go 模块和 Mock，所有测试针对本课源码。本课代理入口是 `go run .`。
+
 先只解决一件事：**客户端把问题发给 Go 程序，Go 程序找模型服务要答案，再把答案转回来。**这一课不选模型、不做 fallback，也不要求你先掌握整本 Go 语法。
 
 本地实验中的“模型服务”是 Mock：它只返回固定模拟文本，方便观察网络行为，不会真的理解问题。
@@ -20,13 +22,13 @@
 
 ## 2. 跑起来：不用模型账号
 
-安装 Go 1.26 或更高版本，确认 `go version` 可用。在项目根目录先验证第一课：
+安装 Go 1.26 或更高版本，确认 `go version` 可用。进入本课目录后先验证第一课：
 
 ```sh
-go test ./lessons/01-proxy
+go test ./...
 ```
 
-然后打开三个终端，都进入项目根目录。
+然后打开三个终端，都进入 `lessons/01-proxy` 目录。
 
 **终端一：启动 Mock。**它默认每隔约 300ms 产生一块模拟数据。
 
@@ -37,7 +39,7 @@ go run ./cmd/mock-provider -addr localhost:9090
 **终端二：启动代理，告诉它上游地址。**
 
 ```sh
-UPSTREAM_URL=http://localhost:9090/v1 UPSTREAM_API_KEY=demo-only go run ./lessons/01-proxy
+UPSTREAM_URL=http://localhost:9090/v1 UPSTREAM_API_KEY=demo-only go run .
 ```
 
 `UPSTREAM_URL` 是模型服务的 API 根地址；不要在这里重复加 `/chat/completions`。`demo-only` 是本地实验占位值，Mock 不校验它。代理默认监听 `localhost:8081`。
@@ -98,7 +100,7 @@ curl -N -i http://localhost:8081/v1/chat/completions \
 | 对正确路径发 GET | 405 | 接口只接受 POST |
 | 流没结束时停止 curl | 客户端退出，上游调用被取消 | 请求生命周期可以传递取消信号 |
 
-不用只凭肉眼判断取消：`go test -v ./lessons/01-proxy` 中已有真实临时 HTTP 测试，检查首块在上游结束前到达，以及客户端断开传到上游。实验完成后，在两个服务终端分别按 Ctrl-C 停止程序。
+不用只凭肉眼判断取消：`go test -v .` 中已有真实临时 HTTP 测试，检查首块在上游结束前到达，以及客户端断开传到上游。实验完成后，在两个服务终端分别按 Ctrl-C 停止程序。
 
 ## 6. 再接真实兼容服务
 
@@ -108,7 +110,7 @@ curl -N -i http://localhost:8081/v1/chat/completions \
 export UPSTREAM_URL='https://api.example.com/v1'
 export UPSTREAM_API_KEY='在本机设置你的上游密钥'
 export GATEWAY_ADDR='localhost:8081'
-go run ./lessons/01-proxy
+go run .
 ```
 
 这是占位示例。真实的模型 ID 也要替换为上游支持的值。调用方传来的 Authorization 不会原样转发，代理会使用自己的上游凭据；密钥不会写入日志。

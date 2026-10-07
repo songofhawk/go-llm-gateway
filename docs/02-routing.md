@@ -1,22 +1,24 @@
 # 02：把“想要什么模型”和“由谁执行”分开
 
+**本课独立代码：[lessons/02-routing](../lessons/02-routing/README.md)。**先在仓库根目录执行 `cd lessons/02-routing`，再运行本文命令。此目录有自己的 Go 模块和 Mock，所有测试针对本课源码。
+
 模型档次 economy（经济型）/ balanced（均衡型）/ powerful（高能力型）表达成本与能力需求，Provider 负责供应商协议。名称只表示网关的逻辑档次，实际模型由配置映射。将两者分开后，客户端可以保持逻辑档次不变，由配置选择实际执行的供应商和模型。
 
 ## 先看图：economy 是需求档次，不是某一家模型的名字
 
 同一个问题“介绍一下 Go”，可以交给不同供应商。客户端只说自己需要哪个档次，由网关配置决定实际模型。
 
-![economy先选择主候选组，只有允许fallback且主组耗尽才使用备用组](assets/02-routing.svg)
+![economy映射到候选组，同组轮转，允许重试的失败再换候选](assets/02-routing-lesson.svg)
 
-[查看 Mermaid 源图](diagrams/02-routing.mmd)
+[查看 Mermaid 源图](diagrams/02-routing-lesson.mmd)
 
-**读图例子（示意数值）：**A 占用 10/20 个名额，B 占用 3/20 个名额，网关会倾向 B。两者都属于第一组，不是每次同时调用两个模型。只有允许 fallback 且该组没有剩余可用候选时，才考虑下一组。
+**读图例子：**第一次请求先选 A，下一次先选 B；一次请求只先调用一个候选。A、B 都属于第一组，允许重试的失败会继续尝试组内其他候选，主组候选用尽后才考虑备用组。本课先使用轮转；按占用比例选择和满载跳过在第 3 课加入。
 
 客户端发出 `model=economy`；上游收到的是 `model=demo-small`。`Provider` 负责“怎样向这家服务发请求”，`Target` 则把“这家服务”和“这个真实模型”绑定在一起。
 
 ## 沿请求走一遍
 
-客户端发送 `model=economy`。`ParseRequest` 读取这个逻辑档次；`Gateway.Do` 查 economy 的候选组；`acquire` 选一个尚有容量的目标；`OpenAIProvider.Open` 将请求里的 model 换成该目标的实际模型 ID，随后发送。
+客户端发送 `model=economy`。`ParseRequest` 读取这个逻辑档次；`Gateway.Do` 查 economy 的候选组；`choose` 轮转选择一个尚未尝试的目标；`OpenAIProvider.Open` 将请求里的 model 换成该目标的实际模型 ID，随后发送。
 
 请求其余字段用 `json.RawMessage` 保留，避免因为只定义了 content 字符串就丢失多模态、工具参数或供应商扩展。每次尝试都会复制字段 map，不能修改共享请求：否则失败重试和并发调用可能串模型。
 
@@ -30,7 +32,7 @@
 ]
 ```
 
-第一组是两个可互换副本，按当前占用比例分配。都不可用或可重试失败后再走第二组；满载的端点直接跳过，不等待名额。并列负载用轮转打散。可以用相同 provider 的不同 model 配置模型 fallback，也可以跨供应商。
+第一组是两个可互换副本，本课按轮转选择。组内候选出现允许重试的失败并用尽后再走第二组。此阶段不统计在途数量，也没有供应商容量检查。可以用相同 provider 的不同 model 配置模型 fallback，也可以跨供应商。
 
 ## 再看图：为什么不能写到一半换模型？
 
@@ -72,8 +74,8 @@
 
 ## 实验
 
-运行 `go test -v ./internal/gateway -run 'TestFallback|TestAttempt|TestLoadBalance|TestProvider'`。然后修改备用组的模型 ID，观察 `X-Gateway-Model`。把两个主端点都以 `-status 503` 启动，验证备用端点被选中；改成 400，验证没有自动换模型。
+运行 `go test -v ./internal/gateway -run 'TestFallback|TestAttempt|TestRoundRobin|TestProvider'`。然后修改备用组的模型 ID，观察 `X-Gateway-Model`。把两个主端点都以 `-status 503` 启动，验证备用端点被选中；改成 400，验证没有自动换模型。
 
-语义自动分档是可选扩展。已经明确的 economy/balanced/powerful、健康状态和容量由代码决定；若加入根据自然语言选择档次的分类器，需要单独评估误判，并在分类失败或置信不足时使用明确的默认档次。
+语义自动分档是可选扩展。已经明确的 economy/balanced/powerful 和候选顺序由代码决定；第 3 课增加容量判断；若加入根据自然语言选择档次的分类器，需要单独评估误判，并在分类失败或置信不足时使用明确的默认档次。
 
 下一步：[第 3 步：并发与生命周期](03-concurrency.md)。

@@ -1,6 +1,8 @@
 # 05：故障实验与设计复盘
 
-以下命令在 `go-llm-gateway` 目录执行。每次故障实验结束后恢复对应终端，避免后一项实验被前一项配置干扰。
+**本课独立代码：[lessons/05-labs](../lessons/05-labs/README.md)。**先在仓库根目录执行 `cd lessons/05-labs`，再运行本文命令。此目录有自己的 Go 模块和 Mock，所有测试针对本课源码。本课沿用第 4 课网关功能，新增 `bash scripts/labs.sh` 故障实验入口。
+
+以下命令在 `go-llm-gateway/lessons/05-labs` 目录执行。可以先运行 `bash scripts/labs.sh streaming`；实验脚本用临时 HTTP 服务或 SQLite 自动制造故障并检查结果。每次故障实验结束后恢复对应终端，避免后一项实验被前一项配置干扰。
 
 ## 一张图说明：看到报错，还不算验收结束
 
@@ -14,7 +16,7 @@
 
 ## 实验 A：看见流式输出
 
-按 README 启动三个 mock 和网关。用 `curl -N` 调用 `stream:true`，每隔约 300ms 看见一段数据。换成 `stream:false`，得到一个完整 JSON。两种方式使用同一档次映射和 provider 代码。
+按本课 README 启动三个 mock 和网关。用 `curl -N` 调用 `stream:true`，每隔约 300ms 看见一段数据。换成 `stream:false`，得到一个完整 JSON。两种方式使用同一档次映射和 provider 代码。
 
 只用 `curl` 不加 `-N` 可能是客户端缓冲，不能据此判断服务是否没有刷新。自动测试 `TestStreamingFlushAndDisconnect` 在上游尚未结束时读取首块，直接证明流式能力。
 

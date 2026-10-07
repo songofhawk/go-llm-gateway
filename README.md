@@ -19,15 +19,15 @@
 | 顺序 | 入口 | 学完能回答什么 |
 | --- | --- | --- |
 | 0 | [Go 入门速查](docs/00-go-basics.md) | goroutine、channel、context、interface、defer 分别解决什么问题？ |
-| 1 | [最小代理](docs/01-proxy.md) / `lessons/01-proxy` | 怎样用 Go 把一次请求转发出去，并逐块返回？ |
-| 2 | [模型与 fallback](docs/02-routing.md) / `internal/gateway` | 为什么 provider 与模型档次分开？何时可以重试？ |
-| 3 | [并发与生命周期](docs/03-concurrency.md) | 为什么长流收到 HTTP 头还不能释放名额？如何做背压？ |
-| 4 | [持久化任务](docs/04-jobs.md) / `internal/jobs` | 请求返回后谁拥有任务？重启怎么恢复？ |
-| 5 | [故障实验与设计复盘](docs/05-labs.md) | 怎样用失败实验，而不是“看起来正常”，证明设计？ |
-| 6 | [Mock 与 pprof 压测](docs/06-pprof.md) | 真实长流负载下，CPU、内存和协程在做什么？ |
-| 7 | [请求速率限流](docs/07-rate-limiting.md) | 令牌桶与并发限制有什么区别，如何控制突发？ |
+| 1 | [最小代理](docs/01-proxy.md) / [独立代码](lessons/01-proxy/README.md) | 怎样用 Go 把一次请求转发出去，并逐块返回？ |
+| 2 | [模型与 fallback](docs/02-routing.md) / [独立代码](lessons/02-routing/README.md) | 为什么 provider 与模型档次分开？何时可以重试？ |
+| 3 | [并发与生命周期](docs/03-concurrency.md) / [独立代码](lessons/03-concurrency/README.md) | 为什么长流收到 HTTP 头还不能释放名额？如何做背压？ |
+| 4 | [持久化任务](docs/04-jobs.md) / [独立代码](lessons/04-jobs/README.md) | 请求返回后谁拥有任务？重启怎么恢复？ |
+| 5 | [故障实验与设计复盘](docs/05-labs.md) / [独立代码](lessons/05-labs/README.md) | 怎样用失败实验，而不是“看起来正常”，证明设计？ |
+| 6 | [Mock 与 pprof 压测](docs/06-pprof.md) / [独立代码](lessons/06-pprof/README.md) | 真实长流负载下，CPU、内存和协程在做什么？ |
+| 7 | [请求速率限流](docs/07-rate-limiting.md) / [独立代码](lessons/07-rate-limiting/README.md) | 令牌桶与并发限制有什么区别，如何控制突发？ |
 
-第一课是独立、可运行的标准库代理。从第 2 步起逐步完善同一个 `cmd/gateway` 入口，按模块阅读与验证。[实施计划](PLAN.md) 记录实现阶段，[验收记录](VALIDATION.md) 记录实测结果。
+**每一步都有独立、可运行的代码版本。**进入 [lessons 课程目录](lessons/README.md)，按第 1～7 课分别学习；每课包含自己的 Go 模块、Mock、源码和启动说明，可以单独复制运行。第 5 课是故障实验课，保留第 4 课的网关功能并增加可执行实验。仓库根目录的 `cmd/gateway` 保留完整参考实现。[实施计划](PLAN.md) 记录实现阶段，[验收记录](VALIDATION.md) 记录实测结果。
 
 ## 运行准备
 
@@ -38,9 +38,12 @@ go mod download
 go test ./...
 go test -race ./...
 go vet ./...
+bash scripts/verify-lessons.sh
 ```
 
 Go 安装包与安装说明见 [Go 官方下载页](https://go.dev/dl/)。
+
+课程目录是独立 Go 模块，根目录的 `go test ./...` 不包含课程；`verify-lessons.sh` 会逐课执行测试。学习运行命令见各课 README，以下本地演示使用根目录的完整参考实现。
 
 核心网关只使用标准库；异步任务使用 `database/sql` 和纯 Go SQLite 驱动 `modernc.org/sqlite`，不需要 C 编译器来运行项目（竞态检测的环境要求另见 Go 官方说明）。
 

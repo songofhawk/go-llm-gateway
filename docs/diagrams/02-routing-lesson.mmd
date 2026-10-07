@@ -1,0 +1,7 @@
+flowchart LR
+    C[客户端 model=economy] --> G[按配置选择候选组]
+    G --> R[同组轮转选择]
+    R --> A[primary-a / demo-small]
+    R --> B[primary-b / demo-small]
+    A -. 允许重试的失败 .-> B
+    B -. 主组候选耗尽 .-> F[backup / demo-backup-small]

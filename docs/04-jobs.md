@@ -1,5 +1,7 @@
 # 第 4 课：把慢请求交给后台任务
 
+**本课独立代码：[lessons/04-jobs](../lessons/04-jobs/README.md)。**先在仓库根目录执行 `cd lessons/04-jobs`，再运行本文命令。此目录有自己的 Go 模块和 Mock，所有测试针对本课源码。
+
 一次性聊天调用通常要等模型生成完才返回。后台任务把“收到请求”和“完成模型调用”分成两段：网关先把任务写进 SQLite，再回 `202 Accepted`；独立运行的 worker 调用上游并保存结果。客户端拿到任务 ID 后可以查询进度。
 
 这节先看提交时到底确认了什么，再看 worker 的状态和崩溃恢复。队列适用于单个网关进程；容量和 worker 数量都有限。
@@ -20,7 +22,7 @@
 
 常见误解是把 `202` 当成“模型已完成”。它只确认请求已被接受并持久化；如果客户端没收到 `202`，可能是入库前失败，也可能是数据库已提交后响应在网络中丢失，因此不能据此断定任务没入库。请求返回后客户端断开，也不会取消已入库任务。
 
-先按 [README 的本地演示](../README.md#不需要模型账号的本地演示) 启动三个 Mock，再在项目根目录启动网关：
+先按 [本课 README](../lessons/04-jobs/README.md) 在本课目录启动三个 Mock，再在本课目录启动网关：
 
 ```sh
 go run ./cmd/gateway \
@@ -77,7 +79,7 @@ go test -v ./internal/jobs -run TestRecoveryRequeuesRunningAndPromotesSavedResul
 
 ## 对照代码阅读
 
-先看 [HTTP 提交与查询](../internal/gateway/http.go) 的 `submit` / `getJob`，再看 [任务存储与 worker](../internal/jobs/jobs.go) 的 `Submit`、`Run`、`saveResult`、`claimCompleted`。前者处理一次短 HTTP 请求，后者管理可能持续很久的任务。
+先看 [HTTP 提交与查询](../lessons/04-jobs/internal/gateway/http.go) 的 `submit` / `getJob`，再看 [任务存储与 worker](../lessons/04-jobs/internal/jobs/jobs.go) 的 `Submit`、`Run`、`saveResult`、`claimCompleted`。前者处理一次短 HTTP 请求，后者管理可能持续很久的任务。
 
 提交请求的 context 只负责入库。任务执行使用 worker 的 context；关机时它会取消模型调用并等待 worker 退出。数据库错误会停止运行，修复后重启恢复，不应把数据库写入失败误记为任务成功。
 
