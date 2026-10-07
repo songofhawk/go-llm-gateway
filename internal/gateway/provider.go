@@ -22,17 +22,40 @@ type OpenAIProvider struct {
 	Client *http.Client
 }
 
-func NewHTTPClient(headerTimeout time.Duration) *http.Client {
+// 空闲连接上限与所有端点的并发容量一致，避免高容量配置在每轮请求后反复建连。
+func NewHTTPClient(headerTimeout time.Duration, idleCapacity int) *http.Client {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.DialContext = (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext
-	tr.MaxIdleConns = 256
-	tr.MaxIdleConnsPerHost = 64
+	tr.MaxIdleConns = idleCapacity
+	tr.MaxIdleConnsPerHost = idleCapacity
 	tr.IdleConnTimeout = 90 * time.Second
 	tr.TLSHandshakeTimeout = 5 * time.Second
 	tr.ResponseHeaderTimeout = headerTimeout
 	// 不设置 Client.Timeout=10s：它涵盖完整 body，会把正常长流截断。
 	// 活跃请求数由网关容量控制；HTTP/2 多路复用时连接数不等于请求数。
 	return &http.Client{Transport: tr, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+}
+
+// NewH2CClient 用 HTTP/2 prior knowledge 访问显式支持 h2c 的上游。
+// 取消一条流只发送 RST_STREAM，其他流和 TCP 连接可继续使用。
+// 不自动探测或重试为 HTTP/1，避免重复发送可能计费的 POST。
+func NewH2CClient(headerTimeout time.Duration, idleCapacity int) *http.Client {
+	client := NewHTTPClient(headerTimeout, idleCapacity)
+	tr := client.Transport.(*http.Transport)
+	tr.Protocols = new(http.Protocols)
+	tr.Protocols.SetUnencryptedHTTP2(true)
+	return client
+}
+
+func ValidateEndpoint(e Endpoint) error {
+	if err := ValidateBaseURL(e.BaseURL); err != nil {
+		return err
+	}
+	u, _ := url.Parse(e.BaseURL)
+	if e.H2C && u.Scheme != "http" {
+		return fmt.Errorf("h2c requires an http provider base_url")
+	}
+	return nil
 }
 
 func ValidateBaseURL(raw string) error {

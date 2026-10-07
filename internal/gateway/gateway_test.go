@@ -83,7 +83,7 @@ func clientProvider(t testing.TB, h http.HandlerFunc, times Timeouts) *OpenAIPro
 		h(w, r)
 	}))
 	t.Cleanup(s.Close)
-	c := NewHTTPClient(times.Header)
+	c := NewHTTPClient(times.Header, 64)
 	t.Cleanup(c.CloseIdleConnections)
 	return &OpenAIProvider{URL: s.URL + "/v1", Key: "provider-secret", Client: c}
 }
@@ -701,7 +701,7 @@ func TestSmallErrorBodyReusesConnection(t *testing.T) {
 	}
 	server.Start()
 	defer server.Close()
-	client := NewHTTPClient(time.Second)
+	client := NewHTTPClient(time.Second, 64)
 	defer client.CloseIdleConnections()
 	p := &OpenAIProvider{URL: server.URL + "/v1", Client: client}
 	for i := 0; i < 10; i++ {

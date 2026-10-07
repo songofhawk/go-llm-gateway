@@ -100,6 +100,8 @@ go run ./cmd/gateway -config config.local.json
 
 配置结构：`endpoints` 定义供应商实例和总并发容量；`routes` 的每个档次是“候选组的列表”。同组按占用比例最小选择，组间按顺序 fallback。相同供应商可以映射不同模型，但共享并发容量。
 
+对明确支持明文 HTTP/2 的本机或可信内网上游，可以在对应 endpoint 设置 `"h2c": true`；网关和 Mock 的 `-h2c` 参数额外开启下游明文 HTTP/2。HTTPS 上游继续使用默认的 TLS 协商，不设置 `h2c`。h2c 不提供加密，也不自动降级重发 POST。
+
 客户端的 `model` 是 `economy`（经济型）、`balanced`（均衡型）或 `powerful`（高能力型），省略时默认 `balanced`。这些名称表示路由档次，具体供应商和模型由配置映射。`messages`、`tools`、`temperature` 等其余字段透传。流式输出保留供应商 SSE，必须以完整 `data: [DONE]` 事件结束。响应头 `X-Gateway-Provider` / `X-Gateway-Model` 展示实际选择。
 
 模型兼容性由配置维护：fallback 模型也必须支持请求中的工具、多模态、推理参数。网关不偷偷删除这些参数，也不推断供应商模型能力。
@@ -117,6 +119,8 @@ go run ./cmd/gateway -config config.local.json
 ## 使用 Mock 做压力测试
 
 运行 `bash scripts/stress.sh` 自动完成七类本机场景，并保存 pprof 原始采样及请求统计。已发布的精简结果位于 `docs/stress-results`，不含 196MB 本机临时构建产物。操作步骤见 [第六课](docs/06-pprof.md)，实测结果见 [压测报告](docs/STRESS-REPORT.md)。
+
+取消场景默认使用 h2c，让取消只结束单条流而保留 TCP 连接；其他场景仍使用原来的 HTTP/1.1。`SCENARIOS=cancel CANCEL_CONCURRENCY=64 STRESS_DURATION=60s bash scripts/stress.sh` 可验证持续取消。设置 `HTTP_PROTOCOL=http1` 保留旧协议对照，`HTTP_PROTOCOL=h2c` 则对全部选定场景启用 h2c。取消场景有非预期错误时，脚本保留报告和采样并以非零状态退出。
 
 ## 第 7 步：开启请求速率限流
 

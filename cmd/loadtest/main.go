@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"net/url"
@@ -26,18 +27,22 @@ const maxSamples = 100000
 const maxJobs = 100000
 
 type options struct {
-	url, mode, output, tokenEnv string
-	duration, timeout, drain    time.Duration
-	concurrency                 int
+	url, mode, output, tokenEnv    string
+	duration, timeout, drain, ramp time.Duration
+	concurrency                    int
+	h2c, failOnError               bool
 }
 
 type counters struct {
 	mu                                                                      sync.Mutex
 	started, success, rejected, canceled, transport, protocol               int64
 	statuses                                                                map[string]int64
+	protocols                                                               map[string]int64
 	pollStatuses                                                            map[string]int64
 	latency, acceptanceLatency, rejectedLatency, canceledLatency, firstByte []float64
 	jobLatency                                                              []float64
+	latencySeen, acceptanceSeen, rejectedSeen, canceledSeen, firstByteSeen  int64
+	jobSeen                                                                 int64
 	errorSamples                                                            []string
 	sampleDropped                                                           int64
 	accepted, jobCompleted, jobFailed                                       int64
@@ -48,11 +53,14 @@ type report struct {
 	Mode                 string           `json:"mode"`
 	Concurrency          int              `json:"concurrency"`
 	DurationSeconds      float64          `json:"duration_seconds"`
+	RampSeconds          float64          `json:"ramp_seconds,omitempty"`
 	LoadSeconds          float64          `json:"load_seconds"`
 	TotalSeconds         float64          `json:"total_seconds"`
 	LatencyUnit          string           `json:"latency_unit"`
 	RequestCounts        map[string]int64 `json:"request_counts"`
 	HTTPStatusCounts     map[string]int64 `json:"http_status_counts"`
+	HTTPProtocolCounts   map[string]int64 `json:"http_protocol_counts,omitempty"`
+	TCPDialCounts        map[string]int64 `json:"tcp_dial_counts,omitempty"`
 	PollHTTPStatusCounts map[string]int64 `json:"poll_http_status_counts,omitempty"`
 	LatencyMS            map[string]any   `json:"latency_ms"`
 	Jobs                 map[string]any   `json:"jobs,omitempty"`
@@ -95,7 +103,10 @@ func main() {
 	flag.StringVar(&o.url, "url", "http://localhost:8080", "本机 gateway 地址（仅允许 localhost 或数值回环地址）")
 	flag.StringVar(&o.mode, "mode", "unary", "压测模式：unary、stream、cancel 或 jobs")
 	flag.DurationVar(&o.duration, "duration", 10*time.Second, "调度新请求的时间窗口")
+	flag.DurationVar(&o.ramp, "ramp", 0, "逐步启动全部 worker 的时间；0 表示同时启动")
 	flag.IntVar(&o.concurrency, "concurrency", 32, "固定闭环 worker 数")
+	flag.BoolVar(&o.h2c, "h2c", false, "使用明文 HTTP/2；目标必须显式支持 h2c")
+	flag.BoolVar(&o.failOnError, "fail-on-error", false, "保存报告后，非预期传输或协议错误使进程失败")
 	flag.DurationVar(&o.timeout, "timeout", 30*time.Second, "单次 HTTP 调用超时")
 	flag.DurationVar(&o.drain, "drain", 60*time.Second, "jobs 模式提交结束后的后台任务排空预算")
 	flag.StringVar(&o.output, "output", "", "可选 JSON 报告文件路径")
@@ -111,8 +122,8 @@ func validateOptions(o options) (*url.URL, error) {
 	if o.mode != "unary" && o.mode != "stream" && o.mode != "cancel" && o.mode != "jobs" {
 		return nil, fmt.Errorf("unknown mode %q", o.mode)
 	}
-	if o.duration <= 0 || o.timeout <= 0 || o.drain <= 0 || o.concurrency <= 0 {
-		return nil, errors.New("duration, timeout, drain and concurrency must be positive")
+	if o.duration <= 0 || o.timeout <= 0 || o.drain <= 0 || o.concurrency <= 0 || o.ramp < 0 || o.ramp >= o.duration {
+		return nil, errors.New("duration, timeout, drain and concurrency must be positive; ramp must be nonnegative and shorter than duration")
 	}
 	u, err := url.Parse(o.url)
 	if err != nil || u == nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
@@ -120,6 +131,9 @@ func validateOptions(o options) (*url.URL, error) {
 	}
 	if !isLoopbackHost(u.Hostname()) {
 		return nil, errors.New("url host must be localhost or a numeric loopback address")
+	}
+	if o.h2c && u.Scheme != "http" {
+		return nil, errors.New("h2c requires an http URL")
 	}
 	return u, nil
 }
@@ -138,13 +152,9 @@ func run(o options) error {
 		return err
 	}
 	base := strings.TrimRight(u.String(), "/")
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.MaxIdleConnsPerHost = o.concurrency + 8
-	transport.MaxIdleConns = 2 * (o.concurrency + 8)
-	transport.DialContext = (&net.Dialer{Timeout: 2 * time.Second, KeepAlive: 30 * time.Second}).DialContext
-	client := &http.Client{Transport: transport, Timeout: 0, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client, dials := newLoadClient(o)
 	defer client.CloseIdleConnections()
-	stats := &counters{statuses: map[string]int64{}, pollStatuses: map[string]int64{}}
+	stats := &counters{statuses: map[string]int64{}, pollStatuses: map[string]int64{}, protocols: map[string]int64{}}
 	start := time.Now()
 	loadEnd := start.Add(o.duration)
 	loadCtx, stopLoad := context.WithDeadline(context.Background(), loadEnd)
@@ -154,8 +164,18 @@ func run(o options) error {
 	var workers sync.WaitGroup
 	for i := 0; i < o.concurrency; i++ {
 		workers.Add(1)
-		go func() {
+		go func(index int) {
 			defer workers.Done()
+			if o.ramp > 0 && index > 0 {
+				begin := start.Add(time.Duration(float64(o.ramp) * float64(index) / float64(o.concurrency)))
+				timer := time.NewTimer(time.Until(begin))
+				select {
+				case <-timer.C:
+				case <-loadCtx.Done():
+					timer.Stop()
+					return
+				}
+			}
 			for {
 				select {
 				case <-loadCtx.Done():
@@ -172,7 +192,7 @@ func run(o options) error {
 					return
 				}
 			}
-		}()
+		}(i)
 	}
 	<-loadCtx.Done()
 	stopLoad()
@@ -186,6 +206,11 @@ func run(o options) error {
 	}
 	totalSeconds := time.Since(start).Seconds()
 	out := stats.makeReport(o, loadSeconds, totalSeconds)
+	out.TCPDialCounts = map[string]int64{"attempts": dials.attempts.Load(), "success": dials.success.Load(), "errors": dials.errors.Load()}
+	var resultErr error
+	if o.failOnError && (stats.transport > 0 || stats.protocol > 0 || stats.jobFailed > 0) {
+		resultErr = fmt.Errorf("unexpected errors: transport=%d protocol=%d failed_jobs=%d", stats.transport, stats.protocol, stats.jobFailed)
+	}
 	if o.output != "" {
 		f, e := os.Create(o.output)
 		if e != nil {
@@ -199,9 +224,39 @@ func run(o options) error {
 		if closeErr != nil {
 			return fmt.Errorf("close output: %w", closeErr)
 		}
-		return nil
+		return resultErr
 	}
-	return json.NewEncoder(os.Stdout).Encode(out)
+	if err := json.NewEncoder(os.Stdout).Encode(out); err != nil {
+		return err
+	}
+	return resultErr
+}
+
+type dialCounters struct{ attempts, success, errors atomic.Int64 }
+
+func newLoadClient(o options) (*http.Client, *dialCounters) {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// 所有目标已经被验证为回环地址，压测不经过环境代理。
+	transport.Proxy = nil
+	transport.MaxIdleConnsPerHost = o.concurrency + 8
+	transport.MaxIdleConns = 2 * (o.concurrency + 8)
+	if o.h2c {
+		transport.Protocols = new(http.Protocols)
+		transport.Protocols.SetUnencryptedHTTP2(true)
+	}
+	dials := new(dialCounters)
+	dialer := &net.Dialer{Timeout: 2 * time.Second, KeepAlive: 30 * time.Second}
+	transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		dials.attempts.Add(1)
+		conn, err := dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			dials.errors.Add(1)
+		} else {
+			dials.success.Add(1)
+		}
+		return conn, err
+	}
+	return &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, dials
 }
 
 func reserveJob(n *atomic.Int64) bool {
@@ -252,6 +307,12 @@ func doRequest(client *http.Client, base string, o options, s *counters, jobMu *
 	}
 	defer resp.Body.Close()
 	s.addStatus(resp.StatusCode)
+	s.mu.Lock()
+	if s.protocols == nil {
+		s.protocols = map[string]int64{}
+	}
+	s.protocols[resp.Proto]++
+	s.mu.Unlock()
 	if resp.StatusCode == 429 || resp.StatusCode == 503 {
 		// 读完小错误体才能复用连接；否则压测工具本身会制造额外握手负载。
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
@@ -526,20 +587,24 @@ func (s *counters) addPollStatus(code int) {
 	s.pollStatuses[fmt.Sprint(code)]++
 	s.mu.Unlock()
 }
-func (s *counters) sample(dst *[]float64, v float64) {
+func (s *counters) sample(dst *[]float64, seen *int64, v float64) {
+	(*seen)++
 	if len(*dst) < maxSamples {
 		*dst = append(*dst, v)
 	} else {
 		s.sampleDropped++
+		if index := rand.Int64N(*seen); index < maxSamples {
+			(*dst)[index] = v
+		}
 	}
 }
 func (s *counters) addSuccess(d time.Duration, first float64, code int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.success++
-	s.sample(&s.latency, d.Seconds()*1000)
+	s.sample(&s.latency, &s.latencySeen, d.Seconds()*1000)
 	if first > 0 {
-		s.sample(&s.firstByte, first)
+		s.sample(&s.firstByte, &s.firstByteSeen, first)
 	}
 	_ = code
 }
@@ -558,7 +623,7 @@ func (s *counters) addReadError(d time.Duration, first float64, code int) {
 	s.addError("transport", d, code)
 	if first > 0 {
 		s.mu.Lock()
-		s.sample(&s.firstByte, first)
+		s.sample(&s.firstByte, &s.firstByteSeen, first)
 		s.mu.Unlock()
 	}
 }
@@ -566,7 +631,7 @@ func (s *counters) addProtocolLatency(d time.Duration, first float64, code int) 
 	s.addError("protocol", d, code)
 	if first > 0 {
 		s.mu.Lock()
-		s.sample(&s.firstByte, first)
+		s.sample(&s.firstByte, &s.firstByteSeen, first)
 		s.mu.Unlock()
 	}
 }
@@ -574,19 +639,19 @@ func (s *counters) addRejected(d time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.rejected++
-	s.sample(&s.rejectedLatency, d.Seconds()*1000)
+	s.sample(&s.rejectedLatency, &s.rejectedSeen, d.Seconds()*1000)
 }
 func (s *counters) addCanceled(d time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.canceled++
-	s.sample(&s.canceledLatency, d.Seconds()*1000)
+	s.sample(&s.canceledLatency, &s.canceledSeen, d.Seconds()*1000)
 }
 func (s *counters) addAccepted(d time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.accepted++
-	s.sample(&s.acceptanceLatency, d.Seconds()*1000)
+	s.sample(&s.acceptanceLatency, &s.acceptanceSeen, d.Seconds()*1000)
 }
 func (s *counters) addJobTerminal(ok bool, d time.Duration) {
 	s.mu.Lock()
@@ -596,7 +661,7 @@ func (s *counters) addJobTerminal(ok bool, d time.Duration) {
 	} else {
 		s.jobFailed++
 	}
-	s.sample(&s.jobLatency, d.Seconds()*1000)
+	s.sample(&s.jobLatency, &s.jobSeen, d.Seconds()*1000)
 }
 func (s *counters) addJobPollError(kind string) {
 	s.mu.Lock()
@@ -647,7 +712,8 @@ func (s *counters) makeReport(o options, load, total float64) report {
 	if load > 0 {
 		submittedRPS = float64(s.started) / load
 	}
-	out := report{ErrorSamples: append([]string(nil), s.errorSamples...), Mode: o.mode, Concurrency: o.concurrency, DurationSeconds: o.duration.Seconds(), LoadSeconds: load, TotalSeconds: total, LatencyUnit: "milliseconds", RequestCounts: counts, HTTPStatusCounts: cloneMap(s.statuses), PollHTTPStatusCounts: cloneMap(s.pollStatuses), LatencyMS: map[string]any{"first_byte": percentiles(s.firstByte), "success_complete": percentiles(s.latency), "rejected": percentiles(s.rejectedLatency), "expected_canceled": percentiles(s.canceledLatency), "job_acceptance": percentiles(s.acceptanceLatency)}, Jobs: jobs, SampleLimit: maxSamples, SampleDropped: s.sampleDropped, MemoryBoundNote: "每类延迟最多保留 100000 个样本；jobs 最多提交并保存 100000 个任务 ID。任务完成时间依据服务端 updated_at，要求客户端与网关时钟同步。", SubmittedRPS: submittedRPS, SuccessRPS: successRPS}
+	out := report{ErrorSamples: append([]string(nil), s.errorSamples...), Mode: o.mode, Concurrency: o.concurrency, DurationSeconds: o.duration.Seconds(), RampSeconds: o.ramp.Seconds(), LoadSeconds: load, TotalSeconds: total, LatencyUnit: "milliseconds", RequestCounts: counts, HTTPStatusCounts: cloneMap(s.statuses), PollHTTPStatusCounts: cloneMap(s.pollStatuses), LatencyMS: map[string]any{"first_byte": percentiles(s.firstByte), "success_complete": percentiles(s.latency), "rejected": percentiles(s.rejectedLatency), "expected_canceled": percentiles(s.canceledLatency), "job_acceptance": percentiles(s.acceptanceLatency)}, Jobs: jobs, SampleLimit: maxSamples, SampleDropped: s.sampleDropped, MemoryBoundNote: "每类延迟最多保留 100000 个水库抽样样本；jobs 最多提交并保存 100000 个任务 ID。任务完成时间依据服务端 updated_at，要求客户端与网关时钟同步。", SubmittedRPS: submittedRPS, SuccessRPS: successRPS}
+	out.HTTPProtocolCounts = cloneMap(s.protocols)
 	if o.mode == "jobs" && load > 0 {
 		out.AcceptedRPS = float64(s.accepted) / load
 	}

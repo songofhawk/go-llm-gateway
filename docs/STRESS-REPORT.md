@@ -1,5 +1,72 @@
 # Mock LLM + pprof 压测实测报告
 
+## 持续取消连接异常修复（2026-10-07）
+
+本轮仍在 Apple M2 Pro / macOS arm64 上运行独立负载端、网关和两个 Mock，使用与旧报告相同的 Go 1.26.8。没有修改系统网络参数、增加自动 POST 重试或把连接错误归类为预期取消。
+
+旧协议 16 并发、12 秒的取消实验本轮未重现错误；延长并提高负载后重现连接异常。以下三轮**分别独立执行**，均为 64 个闭环 worker、60 秒、首块后取消、间隔 20ms，两个上游各有 32 个名额，保留 pprof 采样。早期两个 HTTP/1 压力任务曾同时运行，其结果不用于下面的隔离比较。
+
+| 协议 / 地址及原始结果 | 已发请求 | 预期取消 | 传输错误 | 意外协议/HTTP 错误 | 客户端成功建连 | Mock A+B 接受连接 |
+|---|---:|---:|---:|---:|---:|---:|
+| [HTTP/1.1 / IPv4](stress-results/cancel-http1-20261007/result.json) | 64,774 | 33,077 | 30,665 | 1,032（502） | 33,093 | 33,039 |
+| [h2c / IPv4](stress-results/cancel-h2c-ipv4-20261007/result.json) | 89,597 | 89,597 | 0 | 0 | 30 | 19 |
+| [h2c / IPv6](stress-results/cancel-h2c-ipv6-20261007/result.json) | 89,951 | 89,951 | 0 | 0 | 45 | 22 |
+
+HTTP/1 的错误样本为 `connect: can't assign requested address`。负载中同时记录到 [16,190 条 TIME_WAIT](stress-results/cancel-http1-20261007/tcp-states-during.txt) 和等待建立的连接；[系统临时端口范围](stress-results/cancel-http1-20261007/tcp-settings.txt) 为 49152～65535，TCP MSL 为 15000ms。结合 33,093 次客户端建连和约 33,000 次上游建连，本轮连接资源压力有实时证据支撑。三个角色共用同一台机器，不能把这个限制当成网关本身的吞吐上限。
+
+HTTP/1 的流式请求在 body 未结束时取消，无法复用该连接；持续取消会反复建立 TCP。HTTP/2 可以只取消对应流，保留连接及其上的其他请求。实现采用 Go 标准库的 [Protocols 配置](https://go.dev/src/net/http/http.go) 与 [Transport](https://go.dev/src/net/http/transport.go)，没有引入新依赖。
+
+修复与验证：
+
+- 网关和 Mock 新增显式 `-h2c`，可同时接受 HTTP/1 和明文 HTTP/2。上游 endpoint 的 `"h2c": true` 使用独立、共享的 h2c client；普通 endpoint 的 HTTP/1 / HTTPS TLS 协商保持原配置。h2c 必须明确配置，不自动降级重发 POST。
+- 压测默认只在 cancel 场景对三段链路都启用 h2c；`HTTP_PROTOCOL=http1` 保留旧协议对照。报告增加实际响应协议和客户端 DialContext 统计，Mock 增加真实接受连接数（也包含健康检查/采样连接）。HTTP/2 初始化时可以有多个并行建连，不能将表中的连接数理解成恰好一条。
+- 两轮 h2c 的全部请求实际返回 HTTP/2，两个 Mock 的 `canceled` 合计分别为 89,597 和 89,951，`completed=0`，网关和两个 Mock 的 `active` 最终均为 0。不是仅在负载端计一次取消；取消到达了上游。网关排空后 goroutine 为 27（初始 25），仍保有可复用的上游连接；不据这个快照宣称所有协程已消失。
+- 回归测试 `TestH2CCancelKeepsOtherStreamsAndConnection` 在一个正常活动流旁连续取消 128 个请求，验证取消到达上游、正常流得到完整 DONE、上下游各只建立一条 TCP、供应商名额最终归零。
+- 取消压测启用 `-fail-on-error`。隔离 HTTP/1 对照以状态 2 失败，但仍保存结果及完成采样；两轮 h2c 以状态 0 完成。意外传输/协议错误没有被忽略，预期取消和容量拒绝单独计数。
+- 全部 62 项顶层测试（另含子用例）、`go test -race`、`go vet`、构建及脚本语法检查通过。
+
+复现当前取消场景与旧协议对照：
+
+```sh
+SCENARIOS=cancel CANCEL_CONCURRENCY=64 STRESS_DURATION=60s bash scripts/stress.sh
+STRESS_HOST=::1 SCENARIOS=cancel CANCEL_CONCURRENCY=64 STRESS_DURATION=60s bash scripts/stress.sh
+HTTP_PROTOCOL=http1 SCENARIOS=cancel CANCEL_CONCURRENCY=64 STRESS_DURATION=60s bash scripts/stress.sh
+```
+
+**适用范围：**持续取消导致的本机连接重建压力已通过 HTTP/2 路径消除，并通过 IPv4/IPv6 对照验证；仅支持 HTTP/1 的上游仍会在取消时关闭连接，须控制到达速率或使用独立负载机。真实 HTTPS HTTP/2 使用 TLS 协商，h2c 只用于明确支持它的本机/可信内网，不提供加密。旧 IPv6 轮次的 `socket is not connected` 未单独重现，不将本轮端口压力证据当成其精确根因。下面的历史失败结果全部保留。
+
+## 本机成功吞吐上探（2026-09-25）
+
+负载端、网关、两个 Mock Provider 仍在同一台机器上独立运行。为测量网关处理能力而非默认容量限制，本轮把网关一次性请求容量设为 4,096、两个端点各设为 2,048；Mock 一次性响应等待 20ms，关闭请求速率限制和 pprof。下表是**客户端并发 worker 数**与已完成的成功请求数，吞吐是整个测试窗口的平均值。
+
+| 客户端 worker | 时长 / 启动方式 | 成功请求 | 成功吞吐 | 错误 |
+|---:|---|---:|---:|---|
+| [256](stress-results/ceiling/256/result.json) | 12 秒 / 同时启动 | 142,330 | 11,840 次/秒 | 0 |
+| [512](stress-results/ceiling/512-after/result.json) | 12 秒 / 同时启动 | 278,803 | 23,190 次/秒 | 0 |
+| [1,024](stress-results/ceiling/1024/result.json) | 12 秒 / 同时启动 | 456,262 | **37,956 次/秒** | 0 |
+| [1,024](stress-results/ceiling/1024-ramp/result.json) | 20 秒 / 2 秒渐进启动 | 729,066 | 36,415 次/秒 | 0 |
+| [1,152](stress-results/ceiling/1152-ramp/result.json) | 20 秒 / 2 秒渐进启动 | 269,385 | 13,447 次/秒 | 5,628 次客户端连接错误、2 次 502 |
+| [1,536](stress-results/ceiling/1536-ramp/result.json) | 20 秒 / 2 秒渐进启动 | 163,132 | 6,141 次/秒 | 9,998 次客户端连接错误 |
+| [2,048](stress-results/ceiling/2048-fresh/result.json) | 12 秒 / 新目标端口 | 30,488 | 2,494 次/秒 | 3,194 次客户端连接错误、1,552 次 502 |
+
+本轮**最大无错误观测值**是 1,024 worker、12 秒内平均 37,956 次/秒；20 秒复测仍有 729,066 次成功且无错误，成功响应延迟 p95 为 37.6ms。1,152 worker 起，负载端大量报告 `connect: can't assign requested address`，即使换目标端口、渐进启动仍会复现。这个拐点是同机负载端的网络资源限制；现有结果不能推出网关程序或硬件的最终上限。1,024 worker 时，两个 Mock 各达到 512 个同时处理请求，说明本轮确实超过了原来的 64 路网关配置。
+
+压测还发现上游 HTTP 空闲连接池原来固定为每主机 64 条。512 worker 时[调整前](stress-results/ceiling/512-before/result.json)有 1,715 次 502，成功吞吐 13,357 次/秒；按端点总容量调整连接池后，512 worker 的 502 消失，成功吞吐升至 23,190 次/秒。连接池不是流量许可额度；空闲上限只决定已建立连接能保留多少以供复用。
+
+重跑 20 秒档位：`SCENARIOS=unary PROFILE=0 ENDPOINT_CAPACITY=2048 GATEWAY_UNARY_CAPACITY=4096 UNARY_CONCURRENCY=1024 STRESS_DURATION=20s STRESS_RAMP=2s bash scripts/stress.sh`。需要 Go 1.26；没有放进 PATH 时可用 `GO` 指定二进制。`PROFILE=0` 会关闭诊断服务和采样；延迟报告在样本超过 100,000 时使用覆盖全程的有界抽样。完整本机产物保存在被 Git 忽略的 `artifacts/`。
+
+## 1 万闭环 worker 过载测试
+
+2026-09-25 在本机以 10,000 个固定 worker 向本地网关持续发送 12 秒一次性请求；两个 Mock Provider 各等待 20ms。网关的一次性并发上限仍为 64，入口处理上限为 160，因此本次验证的是大批并发请求到达时的过载保护，不是 1 万路同时推理。请求统计见[原始 JSON](stress-results/scale-10k/result.json)。
+
+| 请求启动 | 成功 | 网关 503 | 客户端传输错误 | 成功延迟 p50 / p95 / p99 | 成功 RPS |
+|---:|---:|---:|---:|---:|---:|
+| 101,162 | 6,493 | 91,633 | 3,036 | 1,444 / 1,979 / 2,017 ms | 529.78 |
+
+网关和 Mock 进程都保持运行并正常退出，结果同时暴露了负载机瓶颈：传输错误样本是压测客户端 `dial tcp ... connect: can't assign requested address`，说明单机单源地址无法稳定承载这一级别的连接建立/重建速率。因而这组数据证明了 10,000 worker 下网关仍能拒绝超额请求并完成部分请求，但不应用来估计生产吞吐或 10,000 条长连接容量；要测 100,000 级别或测网关极限，需要多台负载机分摊连接与源端口，并按生产容量调整网关、上游和速率配置。
+
+重跑命令：`SCENARIOS=unary PROFILE=0 UNARY_CONCURRENCY=10000 STRESS_DURATION=12s OUT=artifacts/stress-scale-10k bash scripts/stress.sh`。压测报告落入 `artifacts/`，该目录被 Git 忽略；`PROFILE=0` 关闭 pprof 采样，减少高负载下的诊断开销。
+
 日期：2026-09-24。环境：Apple M2 Pro、macOS arm64、Go 1.26.8。网关、负载客户端、两个 Mock LLM 分别运行于独立进程，但共用一台机器。所有模型调用均为 Mock，没有付费模型或真实业务数据。
 
 **结论：一次性、长流、有界超载、带备用余量的 fallback、异步持久任务和预期停流释放均完成验证；高频主动取消仍存在连接异常，不能宣称所有压力场景通过。**
@@ -65,7 +132,9 @@
 
 满载 fallback 的前置复测也保留在 [修复错误体复用后的满载结果](stress-results/fallback-saturated/result.json)：64 并发时，33,961 次请求有 31,281 次成功和 2,680 次失败。当时上游 503 仍被映射成 502，随后已修正映射。Mock A 的 7,166 次故障中，只有 4,486 次取得了额外候选调用，剩余 2,680 次无法被备用容量吸收。**fallback 不能凭空增加容量。**有余量的 16 并发复测与这个满载场景用途不同，不能直接拿吞吐数字比较优化幅度。
 
-## 未解决：高频取消产生本机连接异常
+## 历史未解决记录：高频取消产生本机连接异常（2026-09-24）
+
+持续取消的 HTTP/2 修复与 2026-10-07 复测见本文开头。以下为原始 HTTP/1 轮次的发现，不以新结果覆盖旧故障，也不宣称已证明旧 IPv6 错误的精确根因。
 
 - 第一轮 IPv6 高取消流量未能完成采样，没有可用的请求结果文件；因此不将其作为成功数据。
 - 调整连接池后的 IPv6 16 并发取消仍出现 `read: socket is not connected`，并伴随 502；见 [原始结果](stress-results/cancel-ipv6/result.json)。

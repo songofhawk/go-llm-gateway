@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -21,6 +24,26 @@ func TestValidateOptionsAllowsOnlyLoopbackHosts(t *testing.T) {
 		if _, err := validateOptions(options{url: raw, mode: "unary", duration: time.Second, timeout: time.Second, drain: time.Second, concurrency: 1}); err == nil {
 			t.Errorf("不应允许此 URL %q", raw)
 		}
+	}
+}
+
+func TestLatencySamplesIncludeLaterRequests(t *testing.T) {
+	s := &counters{}
+	for i := 0; i < 2*maxSamples; i++ {
+		value := float64(0)
+		if i >= maxSamples {
+			value = 1
+		}
+		s.sample(&s.latency, &s.latencySeen, value)
+	}
+	later := 0
+	for _, value := range s.latency {
+		if value == 1 {
+			later++
+		}
+	}
+	if len(s.latency) != maxSamples || s.sampleDropped != maxSamples || later < 40000 || later > 60000 {
+		t.Fatalf("延迟样本应覆盖整个压测窗口：size=%d dropped=%d later=%d", len(s.latency), s.sampleDropped, later)
 	}
 }
 
@@ -169,5 +192,50 @@ func TestRedirectIsReturnedAsUnexpectedStatus(t *testing.T) {
 	}
 	if stats.protocol != 1 {
 		t.Fatalf("redirect 应作为意外 HTTP 状态计错误：%d", stats.protocol)
+	}
+}
+
+func TestH2CCancelReportAndStrictFailure(t *testing.T) {
+	for _, status := range []int{200, 502} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				io.Copy(io.Discard, r.Body)
+				r.Body.Close()
+				if r.ProtoMajor != 2 {
+					t.Errorf("expected HTTP/2, got %s", r.Proto)
+				}
+				if status != 200 {
+					http.Error(w, "unexpected upstream error", status)
+					return
+				}
+				w.Header().Set("Content-Type", "text/event-stream")
+				io.WriteString(w, "data: first\n\n")
+				http.NewResponseController(w).Flush()
+				<-r.Context().Done()
+			}))
+			srv.Config.Protocols = new(http.Protocols)
+			srv.Config.Protocols.SetUnencryptedHTTP2(true)
+			srv.Start()
+			defer srv.Close()
+			output := filepath.Join(t.TempDir(), "result.json")
+			err := run(options{url: srv.URL, mode: "cancel", output: output, duration: 100 * time.Millisecond, timeout: time.Second, drain: time.Second, concurrency: 1, h2c: true, failOnError: true})
+			if (err != nil) != (status != 200) {
+				t.Fatalf("strict failure: status=%d err=%v", status, err)
+			}
+			data, err := os.ReadFile(output)
+			if err != nil {
+				t.Fatal("must save report even on failure:", err)
+			}
+			var result report
+			if err := json.Unmarshal(data, &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.HTTPProtocolCounts["HTTP/2.0"] == 0 || result.TCPDialCounts["success"] != 1 || result.TCPDialCounts["errors"] != 0 {
+				t.Fatalf("protocol/connection accounting: %s", data)
+			}
+			if status == 200 && result.RequestCounts["expected_canceled"] == 0 {
+				t.Fatal("cancellations were not recorded")
+			}
+		})
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -17,6 +18,7 @@ type settings struct {
 	status, chunks, chunkBytes, failEvery, failureStatus, stallAfter int
 	delay                                                            time.Duration
 	truncate                                                         bool
+	connections                                                      *atomic.Int64
 }
 type counters struct{ requests, active, peak, completed, canceled, faults atomic.Int64 }
 
@@ -26,7 +28,11 @@ func newMock(cfg settings) http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "ok") })
 	mux.HandleFunc("GET /stats", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]int64{"requests": stats.requests.Load(), "active": stats.active.Load(), "peak": stats.peak.Load(), "completed": stats.completed.Load(), "canceled": stats.canceled.Load(), "faults": stats.faults.Load()})
+		var connections int64
+		if cfg.connections != nil {
+			connections = cfg.connections.Load()
+		}
+		_ = json.NewEncoder(w).Encode(map[string]int64{"requests": stats.requests.Load(), "active": stats.active.Load(), "peak": stats.peak.Load(), "completed": stats.completed.Load(), "canceled": stats.canceled.Load(), "faults": stats.faults.Load(), "connections": connections})
 	})
 	mux.HandleFunc("POST /v1/chat/completions", func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
@@ -119,6 +125,7 @@ func wait(ctx context.Context, d time.Duration) bool {
 }
 func main() {
 	addr := flag.String("addr", "localhost:9090", "监听地址")
+	h2c := flag.Bool("h2c", false, "额外接受明文 HTTP/2")
 	cfg := settings{}
 	flag.IntVar(&cfg.status, "status", 200, "固定上游状态码")
 	flag.DurationVar(&cfg.delay, "delay", 300*time.Millisecond, "一次性响应或每个流式块的等待时间")
@@ -132,7 +139,25 @@ func main() {
 	if cfg.delay < 0 || cfg.chunks < 1 || cfg.chunkBytes < 1 || cfg.chunkBytes > 1<<20 || cfg.failEvery < 0 || cfg.stallAfter < -1 || cfg.status < 200 || cfg.status > 599 || cfg.failureStatus < 400 || cfg.failureStatus > 599 {
 		log.Fatal("invalid mock settings")
 	}
-	server := &http.Server{Addr: *addr, Handler: newMock(cfg), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second}
+	server := newMockServer(*addr, cfg, *h2c)
 	log.Printf("mock on %s; chunks=%d delay=%s", *addr, cfg.chunks, cfg.delay)
 	log.Fatal(server.ListenAndServe())
+}
+
+func newMockServer(addr string, cfg settings, h2c bool) *http.Server {
+	connections := new(atomic.Int64)
+	cfg.connections = connections
+	server := &http.Server{Addr: addr, Handler: newMock(cfg), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second,
+		ConnState: func(_ net.Conn, state http.ConnState) {
+			if state == http.StateNew {
+				connections.Add(1)
+			}
+		},
+	}
+	if h2c {
+		server.Protocols = new(http.Protocols)
+		server.Protocols.SetHTTP1(true)
+		server.Protocols.SetUnencryptedHTTP2(true)
+	}
+	return server
 }

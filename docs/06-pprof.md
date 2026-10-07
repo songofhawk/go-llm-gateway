@@ -22,6 +22,18 @@ bash scripts/stress.sh
 
 脚本自动构建并启动两个 Mock LLM、一个网关，以及独立的压测客户端。全部调用留在本机，数据库是每个场景新建的实验文件；完成后关闭自己的子进程。默认显式使用 IPv4 回环地址 `127.0.0.1`（可用 `STRESS_HOST=localhost` 对比 IPv6 解析路径），业务端口 18080、pprof 16060、Mock 19090/19091，与默认业务端口 8080 分开。
 
+2026-10-07 起，默认 `HTTP_PROTOCOL=auto`：只有 cancel 场景使用明文 HTTP/2（h2c），其他场景保持 HTTP/1.1。`HTTP_PROTOCOL=http1` 可复现旧协议，`HTTP_PROTOCOL=h2c` 可对全部选定场景启用 HTTP/2；`STRESS_HOST=::1` 显式测 IPv6。每个场景生成独立的 `config.json`，所有三个角色的协议配置一致。
+
+持续取消复测：
+
+```sh
+SCENARIOS=cancel CANCEL_CONCURRENCY=64 STRESS_DURATION=60s bash scripts/stress.sh
+# HTTP/1 对照可能因临时端口压力失败；保留报告并返回非零状态。
+HTTP_PROTOCOL=http1 SCENARIOS=cancel CANCEL_CONCURRENCY=64 STRESS_DURATION=60s bash scripts/stress.sh
+```
+
+报告新增 `http_protocol_counts`（实际响应协议）与 `tcp_dial_counts`（客户端 DialContext 的尝试、成功、错误次数）；Mock 的 `/stats` 增加接受的 TCP `connections`，包含健康检查和采样连接。连接数不等于请求数：HTTP/2 可以反复创建并取消流而继续使用连接。取消场景启用 `-fail-on-error`，预期取消和容量拒绝不算错误，传输错误与意外 HTTP/协议错误仍使压测失败。
+
 可以用 `SCENARIOS="overload cancel jobs"` 只运行选定场景；输出目录仍须是新目录。
 
 若端口已被占用，脚本会报错，不会停止已有进程。可以使用 `GW_PORT`、`DEBUG_PORT`、`MOCK_A_PORT`、`MOCK_B_PORT` 修改端口。输出默认位于 `artifacts/stress-日期时间`，可用 `OUT` 指定新目录。脚本拒绝复用已有输出目录，避免旧数据库干扰复测。
@@ -35,7 +47,7 @@ bash scripts/stress.sh
 | unary | 64 | 等待 20ms 后完整 JSON | 完成吞吐、延迟、分配 |
 | long-stream | 64 | 100 块 × 100ms，约 10 秒流 | 首块延迟、长连接资源、排空后恢复 |
 | overload | 192 | 相同长流，网关流式上限 64 | 是否拒绝过量工作、在途是否有界 |
-| cancel | 16 | 收到首块就取消，暂停 20ms 后下一次，剩余 99 块不用再生成 | 上游取消、槽位回收 |
+| cancel | 16（可设 CANCEL_CONCURRENCY） | 收到首块就取消，暂停 20ms 后下一次，剩余 99 块不用再生成；默认 h2c | 上游取消、槽位回收、TCP 复用 |
 | fallback | 16 | A 每三次调用失败一次，B 正常且有备用容量 | 故障是否转向其他候选 |
 | jobs | 32 | 一次性等待 40ms；16 worker、容量 256 | 202 接受率与真正 done 完成率分开 |
 | timeout | 16 | 首块后停住，网关 3 秒 idle timeout | 截断被识别、超时后 active 归零 |
@@ -55,6 +67,8 @@ go run ./cmd/loadtest -url http://localhost:8080 -mode stream -duration 15s -con
 ```
 
 示例配置引用三个 Mock 端点，完整手工运行仍需按 README 启动另外两个，或者复制配置只保留一个端点并同步修改全部档次路由。
+
+手工测取消时，在支持 h2c 的 Mock 和网关上加 `-h2c`，并为配置中的对应 endpoint 增加 `"h2c": true`，负载端使用 `-mode cancel -h2c -fail-on-error`。所有链路都需要支持 HTTP/2，单独把客户端改为 HTTP/2 仍会在 HTTP/1 上游制造重建连接。对真实 HTTPS 服务使用 TLS 协商的 HTTP/2；仅支持 HTTP/1 的上游在持续取消时仍需控制到达速率和负载机连接资源。
 
 pprof 默认关闭。`-pprof` 只接受本机地址，使用独立 mux 和端口；业务 API 不暴露这些调试端点。启用后同时采样 block 和 mutex，会有额外观测开销；采样中的 heap 快照还会触发 GC，因此本报告是带观测开销的结果，不是关闭诊断后的最高吞吐。
 

@@ -30,6 +30,7 @@ func run() error {
 	debugAddr := flag.String("pprof", "", "可选的独立本机 pprof 地址，例如 localhost:6060")
 	configPath := flag.String("config", "config.example.json", "provider 和路由配置")
 	address := flag.String("addr", "localhost:8080", "监听地址")
+	h2c := flag.Bool("h2c", false, "额外接受明文 HTTP/2（仅用于可信内网或本机；不提供 TLS）")
 	dbPath := flag.String("db", "gateway.db", "单进程 SQLite 数据库")
 	workers := flag.Int("workers", 4, "后台调用并发数")
 	queueSize := flag.Int("queue", 128, "未完成任务容量")
@@ -72,11 +73,21 @@ func run() error {
 	if err != nil {
 		return errors.New("invalid config JSON")
 	}
-	client := gateway.NewHTTPClient(times.Header)
+	idleCapacity := 0
+	for _, endpoint := range config.Endpoints {
+		idleCapacity += endpoint.Capacity
+	}
+	client := gateway.NewHTTPClient(times.Header, idleCapacity)
 	defer client.CloseIdleConnections()
+	var h2cClient *http.Client
+	defer func() {
+		if h2cClient != nil {
+			h2cClient.CloseIdleConnections()
+		}
+	}()
 	providers := map[string]gateway.Provider{}
 	for _, endpoint := range config.Endpoints {
-		if err := gateway.ValidateBaseURL(endpoint.BaseURL); err != nil {
+		if err := gateway.ValidateEndpoint(endpoint); err != nil {
 			return err
 		}
 		key := ""
@@ -86,7 +97,14 @@ func run() error {
 				return fmt.Errorf("missing provider credential env: %s", endpoint.APIKeyEnv)
 			}
 		}
-		providers[endpoint.Name] = &gateway.OpenAIProvider{URL: endpoint.BaseURL, Key: key, Client: client}
+		providerClient := client
+		if endpoint.H2C {
+			if h2cClient == nil {
+				h2cClient = gateway.NewH2CClient(times.Header, idleCapacity)
+			}
+			providerClient = h2cClient
+		}
+		providers[endpoint.Name] = &gateway.OpenAIProvider{URL: endpoint.BaseURL, Key: key, Client: providerClient}
 	}
 	g, err := gateway.New(config, providers, times)
 	if err != nil {
@@ -110,6 +128,11 @@ func run() error {
 	defer cancelRequests()
 	server := &http.Server{Addr: *address, Handler: api.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10,
 		BaseContext: func(net.Listener) context.Context { return requests },
+	}
+	if *h2c {
+		server.Protocols = new(http.Protocols)
+		server.Protocols.SetHTTP1(true)
+		server.Protocols.SetUnencryptedHTTP2(true)
 	}
 	listener, err := net.Listen("tcp", *address)
 	if err != nil {

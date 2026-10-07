@@ -79,6 +79,7 @@ type Endpoint struct {
 	BaseURL   string `json:"base_url"`
 	APIKeyEnv string `json:"api_key_env"`
 	Capacity  int    `json:"capacity"`
+	H2C       bool   `json:"h2c,omitempty"` // 仅对显式支持明文 HTTP/2 的 http:// 上游开启。
 }
 type Config struct {
 	Endpoints []Endpoint            `json:"endpoints"`
