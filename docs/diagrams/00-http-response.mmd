@@ -1,0 +1,50 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
+flowchart LR
+    accTitle: 示例 handler 写响应的顺序
+    accDescr: hello示例先设置Content-Type，再写状态码200，最后写hello响应体。Header调用本身只修改待发送的头。
+    A["1 · 准备响应头<br/>w.Header().Set(...)"] --> B["2 · 写状态码<br/>w.WriteHeader(200)"]
+    B --> C["3 · 写响应体<br/>io.WriteString(w, hello)"]
+    C --> D["客户端看到<br/>200 + text/plain + hello"]
+    classDef server fill:#EAF0FA,stroke:#6285B7,color:#29466D,stroke-width:1.5px;
+    classDef handler fill:#F0EBF8,stroke:#9173AD,color:#58436B,stroke-width:1.5px;
+    classDef client fill:#E7F3EF,stroke:#448675,color:#234B42,stroke-width:1.5px;
+    class A,B server;
+    class C handler;
+    class D client;

@@ -1,0 +1,53 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
+flowchart TB
+    accTitle: 下游取消怎样传到上游
+    accDescr: 客户端断开后net/http取消入站context，WithTimeout派生的context随之取消，Transport中止上游HTTP请求，Mock的请求context随连接终止而取消，wait退出。
+    C["curl 退出或断开"] --> R["net/http 取消 r.Context()"]
+    R --> X["WithTimeout 派生的 ctx"]
+    TIME["2 分钟时限到达"] --> X
+    X --> T["Transport 观察取消<br/>中止上游请求或响应读取"]
+    T --> U["上游连接 / HTTP 流终止<br/>Mock 的 r.Context() 取消"]
+    U --> W["wait 的 ctx.Done() 就绪<br/>停止生成，路由函数退出"]
+    classDef cancel fill:#FCEBE7,stroke:#C77D6B,color:#773F33;
+    classDef context fill:#F0EBF8,stroke:#8E77B0,color:#584174;
+    classDef upstream fill:#FFF3DE,stroke:#C49A4A,color:#71531F;
+    class C,TIME cancel;
+    class R,X context;
+    class T,U,W upstream;

@@ -71,6 +71,8 @@ func newGateway(upstreamBase *url.URL, apiKey string, transport http.RoundTrippe
 }
 
 func (g *gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	if r.URL.Path != chatPath {
 		http.NotFound(w, r)
 		return
@@ -87,7 +89,6 @@ func (g *gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// 服务端的 ReadTimeout 限制客户端发送请求体所用的时间，MaxBytesReader
 	// 限制读取的字节数和内存用量。开始代理前，再设置总请求时限并继承入站请求的 context。
-	defer r.Body.Close()
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {

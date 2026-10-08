@@ -1,0 +1,90 @@
+
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>一次请求，经过了什么？</title></head><body>
+  <template>
+    <style>
+  :root { --bg: #0b1020; --fg: #f3f6fc; --muted: #9aa9bf; --mint: #59ead9; --violet: #b6bcff; --amber: #ffca74; --blue: #91c5ff; }
+  * { box-sizing: border-box; }
+  #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; padding: 82px 132px 0; color: var(--fg); background: radial-gradient(ellipse at 74% 43%, #192647 0%, var(--bg) 55%); font-family: system-ui, sans-serif; }
+  #root::before { content: ""; position: absolute; inset: 0; opacity: .18; background-image: linear-gradient(rgba(162,180,216,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(162,180,216,.10) 1px, transparent 1px); background-size: 64px 64px; mask-image: linear-gradient(90deg, transparent, black 20%, black 90%, transparent); }
+  .scene-header { position: relative; z-index: 2; }
+  .kicker { color: var(--mint); font: 600 22px/1.2 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; display: flex; align-items: center; gap: 13px; }
+  .live-dot { width: 10px; height: 10px; display: inline-block; border-radius: 50%; background: var(--mint); box-shadow: 0 0 22px rgba(66,214,197,.7); }
+  .scene-title { margin: 24px 0 27px; max-width: 1500px; font-size: 70px; line-height: 1.15; font-weight: 720; letter-spacing: -.045em; }
+  .scene-summary { margin: 0; color: var(--muted); font-size: 31px; line-height: 1.35; }
+  .diagram-stage { position: absolute; z-index: 1; left: 170px; top: 300px; width: 1580px; height: 500px; overflow: visible; }
+  .routes { position: absolute; inset: 0; width: 1580px; height: 500px; overflow: visible; }
+  .route-line { fill: none; stroke: rgba(66,214,197,.85); stroke-width: 4; stroke-linecap: round; filter: drop-shadow(0 0 8px rgba(66,214,197,.25)); }
+  .stage-node { position: absolute; left: 50%; top: 50%; width: 270px; min-height: 126px; padding: 22px 25px 20px; border: 1px solid rgba(163,181,221,.24); border-radius: 18px; background: linear-gradient(145deg, rgba(27,39,65,.98), rgba(16,24,42,.98)); box-shadow: 0 18px 55px rgba(0,0,0,.28); display: flex; flex-direction: column; justify-content: center; will-change: transform, opacity; }
+  .stage-node strong { margin-top: 5px; font-size: 30px; line-height: 1.2; letter-spacing: -.025em; white-space: nowrap; }
+  .stage-node small { margin-top: 9px; color: var(--muted); font-size: 20px; line-height: 1.35; white-space: nowrap; }
+  .node-kicker { color: var(--mint); font: 600 14px/1.1 ui-monospace, monospace; letter-spacing: .12em; }
+  .tone-mint { border-color: rgba(66,214,197,.44); }
+  .tone-violet { border-color: rgba(164,170,255,.48); }
+  .tone-violet .node-kicker { color: var(--violet); }
+  .tone-blue { border-color: rgba(123,183,255,.45); }
+  .tone-blue .node-kicker { color: var(--blue); }
+  .tone-amber { border-color: rgba(255,202,116,.5); }
+  .tone-amber .node-kicker { color: var(--amber); }
+  .stage-mark { position: absolute; right: 7px; bottom: -22px; color: rgba(200,215,241,.88); font: 600 18px/1 ui-monospace, monospace; letter-spacing: .1em; }
+  .scene-footer { position: absolute; left: 132px; right: 132px; bottom: 42px; z-index: 2; }
+  .voice-caption { min-height: 90px; margin: 0 0 23px; max-width: 1570px; color: #e0e7f4; font-size: 30px; line-height: 1.48; letter-spacing: .005em; }
+  .progress { height: 3px; width: 100%; background: rgba(148,165,197,.18); }
+  .progress-fill { display: block; width: 100%; height: 100%; transform: scaleX(0); background: linear-gradient(90deg, var(--mint), var(--blue)); }
+  .footer-meta { margin-top: 17px; display: flex; justify-content: space-between; color: #b0bfd6; font: 600 15px/1 ui-monospace, monospace; letter-spacing: .15em; }
+</style>
+    <div id="root" data-composition-id="opening" data-width="1920" data-height="1080" data-duration="18.956">
+        <header class="scene-header">
+          <div class="kicker"><span class="live-dot"></span>GO LLM GATEWAY · 项目导览</div>
+          <h1 class="scene-title">一次请求，经过了什么？</h1>
+          <p class="scene-summary">把模型调用变成可追踪的工程流程</p>
+        </header>
+        <div class="diagram-stage">
+          <svg class="routes" viewBox="0 0 1580 500" aria-hidden="true"><path class="route-line" data-link-index="0" d="M 225 250 Q 507.5 225 790 250" /><path class="route-line" data-link-index="1" d="M 790 250 Q 1072.5 225 1355 250" /></svg>
+          
+          <div class="stage-node tone-mint" data-target-x="-565" data-target-y="0" data-node-index="0">
+            <span class="node-kicker">01</span>
+            <strong>客户端</strong>
+            <small>发送一次请求</small>
+          </div>
+          <div class="stage-node tone-violet" data-target-x="0" data-target-y="0" data-node-index="1">
+            <span class="node-kicker">02</span>
+            <strong>Go 网关</strong>
+            <small>路由 · 生命周期</small>
+          </div>
+          <div class="stage-node tone-amber" data-target-x="565" data-target-y="0" data-node-index="2">
+            <span class="node-kicker">03</span>
+            <strong>上游模型</strong>
+            <small>Mock 或真实兼容服务</small>
+          </div>
+          <div class="stage-mark">01 / 9</div>
+        </div>
+        <div class="scene-footer">
+          <p class="voice-caption">如果一次大模型请求突然变慢、断开，或者需要换一个供应商，网关应该如何处理？这个项目就从这个问题出发。我们沿着一条请求，看看模型路由、流式输出、并发资源和后台任务是怎样一步步搭起来的。</p>
+          <div class="progress"><span class="progress-fill" style="transform-origin:left center" data-progress="18.956"></span></div>
+          <div class="footer-meta"><span>GO LLM GATEWAY</span><span>01 — 09</span></div>
+        </div>
+    </div>
+    <script>
+      const timeline = gsap.timeline({ paused: true });
+      const root = document.getElementById("root");
+      root.querySelectorAll(".route-line").forEach((path, i) => {
+        const length = path.getTotalLength();
+        path.style.strokeDasharray = String(length);
+        path.style.strokeDashoffset = String(length);
+        timeline.to(path, { strokeDashoffset: 0, duration: 0.58, ease: "power2.out" }, 0.50 + i * 0.13);
+      });
+      timeline.fromTo(root.querySelector(".scene-title"), { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.58, ease: "power3.out" }, 0.15);
+      timeline.fromTo(root.querySelector(".voice-caption"), { y: 13, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: "power2.out" }, 0.32);
+      root.querySelectorAll(".stage-node").forEach((node, i) => {
+        timeline.fromTo(node,
+          { xPercent: -50, yPercent: -50, x: 0, y: 0, scale: 0.72, opacity: 0 },
+          { x: Number(node.dataset.targetX), y: Number(node.dataset.targetY), scale: 1, opacity: 1, duration: 1.0, ease: "power3.out" },
+          0.38 + i * 0.055,
+        );
+      });
+      timeline.fromTo(root.querySelector(".progress-fill"), { scaleX: 0 }, { scaleX: 1, duration: 18.855999999999998, ease: "none" }, 0.05);
+      window.__timelines["opening"] = timeline;
+    </script>
+  </template>
+</body></html>

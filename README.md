@@ -2,6 +2,10 @@
 
 这是一个循序渐进的 Go 大模型网关实践项目。从最小代理开始，逐步实现模型路由、流式传输、并发管理、持久化任务、性能分析和请求限流，理解每个设计决策及其取舍。
 
+## 项目导览视频
+
+[观看中文教学视频（1080p，约 3 分 16 秒）](videos/go-llm-gateway-intro/renders/go-llm-gateway-intro.mp4)。视频源稿、分镜和旁白位于 [`videos/go-llm-gateway-intro`](videos/go-llm-gateway-intro)。
+
 项目可独立运行，内置 Mock LLM，无需模型账号即可完成全部教程与本地实验。源码仓库：[songofhawk/go-llm-gateway](https://github.com/songofhawk/go-llm-gateway)。
 
 ## 先看整体：同一个网关，两种交付方式
@@ -12,13 +16,13 @@
 
 先沿上方的聊天路径读：提出问题 → 网关选择模型 → 接收完整 JSON 或持续到来的数据块。再看后台路径：先拿任务号，稍后查询结果；客户端不必一直保持连接。查询任务时也要经过 HTTP 入口（图中未展开），客户端不会直接连接数据库。
 
-**还不熟悉 Go 时，先读第 1 步的图并运行 Mock；遇到语法再查第 0 步。**每课都按“问题 → 图解 → 具体例子 → 代码与实验”展开。所有图均附可编辑的 Mermaid 源文件，同时提供 SVG，普通 Markdown 阅读器也能显示。
+**还不熟悉 Go 时，先读第 1 步的图并运行 Mock；遇到 HTTP 和标准库概念再查第 0 步。**每课都按“问题 → 图解 → 具体例子 → 代码与实验”展开。第 0 课直接嵌入彩色 Mermaid；其余课程保留 SVG 插图。所有图均附可编辑的 Mermaid 源文件。
 
 ## 学习路线
 
 | 顺序 | 入口 | 学完能回答什么 |
 | --- | --- | --- |
-| 0 | [Go 入门速查](docs/00-go-basics.md) | goroutine、channel、context、interface、defer 分别解决什么问题？ |
+| 0 | [HTTP 与 Go 标准库](docs/00-go-basics.md) | HTTP 请求如何进入 Go handler，再经代理和 Transport 发往上游？ |
 | 1 | [最小代理](docs/01-proxy.md) / [独立代码](lessons/01-proxy/README.md) | 怎样用 Go 把一次请求转发出去，并逐块返回？ |
 | 2 | [模型与 fallback](docs/02-routing.md) / [独立代码](lessons/02-routing/README.md) | 为什么 provider 与模型档次分开？何时可以重试？ |
 | 3 | [并发与生命周期](docs/03-concurrency.md) / [独立代码](lessons/03-concurrency/README.md) | 为什么长流收到 HTTP 头还不能释放名额？如何做背压？ |

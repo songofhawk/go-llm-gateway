@@ -1,0 +1,54 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
+flowchart TB
+    accTitle: 客户端取消与网关截止时间汇入出站请求的 context
+    accDescr: 入站请求取消或网关总时限到达都会取消派生context，Transport响应这个信号，结束当前上游请求。取消不会强行终止不响应context的代码。
+    C["客户端断开<br/>入站 r.Context() 取消"] --> X["派生 context<br/>继承取消 + 设置总时限"]
+    D["网关总时限到达<br/>WithTimeout 的截止时间"] --> X
+    X -->|"交给出站请求"| R["ReverseProxy / Transport<br/>观察取消信号"]
+    R -->|"响应取消"| E["结束当前上游请求<br/>停止等待或读取响应"]
+    N["context 是信号<br/>被调用的代码需要响应它"] -.-> R
+    classDef cancel fill:#FBECE8,stroke:#C77F70,color:#7B473C,stroke-width:1.5px;
+    classDef proxy fill:#F0EBF8,stroke:#9173AD,color:#58436B,stroke-width:1.5px;
+    classDef upstream fill:#FFF3DF,stroke:#BD9553,color:#70552A,stroke-width:1.5px;
+    classDef note fill:#F3F5F8,stroke:#ADBACA,color:#48586F,stroke-width:1px;
+    class C,D cancel;
+    class X proxy;
+    class R,E upstream;
+    class N note;

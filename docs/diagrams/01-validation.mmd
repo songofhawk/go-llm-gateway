@@ -1,0 +1,53 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
+flowchart TD
+    accTitle: gateway.ServeHTTP 的检查和转发顺序
+    accDescr: 先检查路径方法与查询参数，再读取受限请求体，恢复可读取的Body并创建超时context，最后调用内层代理；检查失败就直接结束。
+    A["登记 defer r.Body.Close()<br/>依次检查路径、方法、查询参数"] -->|失败| GATE["返回 404 / 405 / 400<br/>结束当前 handler"]
+    A -->|通过| R["MaxBytesReader + io.ReadAll<br/>最多读取 1 MiB"]
+    R --> V{"读成功且不为空？"}
+    V -->|否| E["超限 413<br/>读取失败或空体 400"]
+    V -->|是| K["bytes.NewReader + io.NopCloser<br/>恢复 r.Body，设置 ContentLength"]
+    K --> P["创建 2 分钟 ctx，登记 defer cancel()<br/>g.proxy.ServeHTTP(w, r.WithContext(ctx))"]
+    classDef process fill:#EAF0FA,stroke:#6285B7,color:#29466D;
+    classDef proxy fill:#F0EBF8,stroke:#8E77B0,color:#584174;
+    classDef error fill:#FCEBE7,stroke:#C77D6B,color:#773F33;
+    class A,R,V,K process;
+    class P proxy;
+    class GATE,E error;

@@ -1,0 +1,67 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
+sequenceDiagram
+    accTitle: 一个合法 POST 请求的实际调用链
+    accDescr: net/http调用gateway的ServeHTTP，gateway读取并恢复请求体后调用ReverseProxy，后者依次调用Director、Transport.RoundTrip和ModifyResponse，再逐段写回响应。
+    participant C as curl
+    participant S as net/http 请求分发
+    participant G as g · *gateway
+    participant P as *ReverseProxy
+    participant T as *http.Transport
+    participant U as Mock 上游
+    C->>S: POST /v1/chat/completions
+    S->>G: server.Handler.ServeHTTP(w, r)
+    Note over G: 检查路径、方法、查询参数<br/>限量读取请求体，再恢复 r.Body
+    G->>G: WithTimeout 创建 ctx<br/>继承 r.Context()，时限 2 分钟
+    G->>P: g.proxy.ServeHTTP(w, r.WithContext(ctx))
+    P->>P: 克隆出站请求；调用 Director(outreq)
+    P->>T: transport.RoundTrip(outreq)
+    T->>U: POST /v1/chat/completions<br/>使用上游认证
+    U-->>T: 响应头；Body 后续可继续读取
+    T-->>P: *http.Response
+    P->>P: 调用响应回调<br/>ModifyResponse
+    P->>S: 复制响应头；w.WriteHeader(resp.StatusCode)
+    loop 读取响应体，直到 EOF
+        P->>P: copyResponse 读取 res.Body
+        P->>S: w.Write(...)；按配置刷新
+        S-->>C: 响应数据逐段到达
+    end
+    P-->>G: ServeHTTP 返回
+    Note over G: 执行 defer cancel() 和原始 Body.Close()
+    G-->>S: gateway.ServeHTTP 返回

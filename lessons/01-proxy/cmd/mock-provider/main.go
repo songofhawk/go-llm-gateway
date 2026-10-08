@@ -70,14 +70,21 @@ func newMock(cfg settings) http.Handler {
 			http.Error(w, "simulated failure", status)
 			return
 		}
-		text := strings.Repeat("x", cfg.chunkBytes)
 		if !req.Stream {
-			if !wait(r.Context(), cfg.delay) {
-				return
+			// 一次性响应也模拟完整的生成过程，只是等所有生成间隔结束后
+			// 才把完整答案交给客户端。这样可以和流式模式比较首字节时间。
+			for i := 0; i < cfg.chunks; i++ {
+				if !wait(r.Context(), cfg.delay) {
+					return
+				}
+			}
+			var content strings.Builder
+			for i := 0; i < cfg.chunks; i++ {
+				content.WriteString(mockChunk(i, cfg.chunkBytes))
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(5 * time.Second))
-			err := json.NewEncoder(w).Encode(map[string]any{"id": "mock", "object": "chat.completion", "model": req.Model, "choices": []any{map[string]any{"index": 0, "message": map[string]string{"role": "assistant", "content": text}, "finish_reason": "stop"}}})
+			err := json.NewEncoder(w).Encode(map[string]any{"id": "mock", "object": "chat.completion", "model": req.Model, "choices": []any{map[string]any{"index": 0, "message": map[string]string{"role": "assistant", "content": content.String()}, "finish_reason": "stop"}}})
 			completed = err == nil
 			return
 		}
@@ -95,7 +102,7 @@ func newMock(cfg settings) http.Handler {
 			if !wait(r.Context(), cfg.delay) {
 				return
 			}
-			data, _ := json.Marshal(map[string]any{"id": "mock", "object": "chat.completion.chunk", "model": req.Model, "choices": []any{map[string]any{"index": 0, "delta": map[string]string{"content": text}}}})
+			data, _ := json.Marshal(map[string]any{"id": "mock", "object": "chat.completion.chunk", "model": req.Model, "choices": []any{map[string]any{"index": 0, "delta": map[string]string{"content": mockChunk(i, cfg.chunkBytes)}}}})
 			if rc.SetWriteDeadline(time.Now().Add(5*time.Second)) != nil {
 				return
 			}
@@ -113,6 +120,16 @@ func newMock(cfg settings) http.Handler {
 	})
 	return mux
 }
+
+// mockChunk 给每个块加上可见编号；一次性响应会把这些块拼接成同一段完整文本。
+func mockChunk(index, chunkBytes int) string {
+	label := fmt.Sprintf("block%d", index+1)
+	if len(label) >= chunkBytes {
+		return label[:chunkBytes]
+	}
+	return label + strings.Repeat(".", chunkBytes-len(label))
+}
+
 func wait(ctx context.Context, d time.Duration) bool {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
@@ -127,8 +144,8 @@ func main() {
 	addr := flag.String("addr", "localhost:9090", "监听地址")
 	cfg := settings{}
 	flag.IntVar(&cfg.status, "status", 200, "固定上游状态码")
-	flag.DurationVar(&cfg.delay, "delay", 300*time.Millisecond, "一次性响应或每个流式块的等待时间")
-	flag.IntVar(&cfg.chunks, "chunks", 5, "流式块数；生成时长约为 chunks × delay")
+	flag.DurationVar(&cfg.delay, "delay", 300*time.Millisecond, "每个模拟生成步骤的间隔")
+	flag.IntVar(&cfg.chunks, "chunks", 5, "模拟生成步骤数；一次性响应等完全部步骤，流式逐步发送")
 	flag.IntVar(&cfg.chunkBytes, "chunk-bytes", 64, "每个内容块的字节数")
 	flag.IntVar(&cfg.failEvery, "fail-every", 0, "每 N 次请求失败一次；0 关闭")
 	flag.IntVar(&cfg.failureStatus, "failure-status", 503, "周期性故障的 HTTP 状态")

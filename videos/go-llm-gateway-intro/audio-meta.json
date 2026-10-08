@@ -1,0 +1,51 @@
+{
+  "voice": "Tingting",
+  "rate": 205,
+  "scenes": [
+    {
+      "id": "opening",
+      "file": "assets/voice/opening.mp3",
+      "duration": 18.456
+    },
+    {
+      "id": "roadmap",
+      "file": "assets/voice/roadmap.mp3",
+      "duration": 19.968
+    },
+    {
+      "id": "request",
+      "file": "assets/voice/request.mp3",
+      "duration": 21.36
+    },
+    {
+      "id": "routing",
+      "file": "assets/voice/routing.mp3",
+      "duration": 22.272
+    },
+    {
+      "id": "streaming",
+      "file": "assets/voice/streaming.mp3",
+      "duration": 22.224
+    },
+    {
+      "id": "capacity",
+      "file": "assets/voice/capacity.mp3",
+      "duration": 23.784
+    },
+    {
+      "id": "jobs",
+      "file": "assets/voice/jobs.mp3",
+      "duration": 23.736
+    },
+    {
+      "id": "rate-limit",
+      "file": "assets/voice/rate-limit.mp3",
+      "duration": 18.936
+    },
+    {
+      "id": "next-steps",
+      "file": "assets/voice/next-steps.mp3",
+      "duration": 20.52
+    }
+  ]
+}

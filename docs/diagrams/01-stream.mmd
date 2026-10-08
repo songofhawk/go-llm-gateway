@@ -1,20 +1,66 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
 sequenceDiagram
-    accTitle: 一次性返回与流式返回
-    accDescr: 一次性等完整答案后返回JSON，流式在同一个请求中多次写出和刷新数据。
-    participant C as 客户端
-    participant G as 网关
-    participant M as Mock LLM
-    C->>G: stream=false
-    G->>M: 请求生成
-    Note over M: 生成完整答案
-    M-->>G: 完整 JSON
-    G-->>C: 一次性交付
-    C->>G: stream=true
-    G->>M: 请求流式生成
-    M-->>G: 第 1 块
-    G-->>C: 立即刷新第 1 块
-    Note over C,M: 请求还没有结束
-    M-->>G: 第 2 块
-    G-->>C: 立即刷新第 2 块
-    M-->>G: DONE 结束事件
-    G-->>C: 转发结束事件
+    accTitle: Mock 的两种输出怎样经过同一份代理代码
+    accDescr: Mock解析stream字段决定等待后完整编码JSON或逐步发送SSE；网关两种模式都通过ReverseProxy复制响应体，不解析事件。示例使用5步和700毫秒间隔。
+    participant C as curl
+    participant P as ReverseProxy
+    participant H as Mock 的 POST 路由
+    C->>P: JSON 请求体中的 stream 参数
+    P->>H: RoundTrip 转发原请求体
+    H->>H: json.Decoder 读取 req.Stream
+    alt stream=false
+        rect rgb(234, 240, 250)
+        H->>H: wait(ctx, 700ms) 共 5 次
+        H->>H: 拼接 block1 到 block5<br/>Encode 完整 JSON
+        H-->>P: 完整 JSON（约 3.5 秒后）
+        P-->>C: copyResponse 写回完整响应
+        end
+    else stream=true
+        rect rgb(231, 243, 239)
+        loop 5 个块，每块等待约 700ms
+            H->>H: wait 和 mockChunk<br/>Fprintf 写 SSE
+            H->>H: rc.Flush()
+            H-->>P: data 事件中的 block1、block2…
+            P-->>C: copyResponse 写入并刷新（curl 用 -N）
+        end
+        H-->>P: data: [DONE]，随后 handler 返回
+        P-->>C: 转发结束事件；响应体读到 EOF 后结束
+        end
+    end

@@ -1,0 +1,78 @@
+{
+  "voice": "Tingting",
+  "rate": 205,
+  "scenes": [
+    {
+      "id": "opening",
+      "title": "一次请求，经过了什么？",
+      "kicker": "GO LLM GATEWAY · 项目导览",
+      "summary": "把模型调用变成可追踪的工程流程",
+      "labels": ["选择模型", "控制等待", "归还资源"],
+      "narration": "如果一次大模型请求突然变慢、断开，或者需要换一个供应商，网关应该如何处理？这个项目就从这个问题出发。我们沿着一条请求，看看模型路由、流式输出、并发资源和后台任务是怎样一步步搭起来的。"
+    },
+    {
+      "id": "roadmap",
+      "title": "从语法到完整服务",
+      "kicker": "学习路线 · 0—7",
+      "summary": "每一课都对应一个可以验证的问题",
+      "labels": ["Go 基础", "代理与路由", "并发与任务", "实验与限流"],
+      "narration": "学习路线从第零课的 Go 基础开始，然后实现最小代理、模型路由、并发管理和持久化任务，最后用故障实验、性能分析和请求限流收尾。先理解资源归谁所有，再追踪它经过哪些模块，是阅读这个仓库的一条好路线。"
+    },
+    {
+      "id": "request",
+      "title": "请求先穿过一个薄代理",
+      "kicker": "01 · HTTP 请求路径",
+      "summary": "客户端 → Go 网关 → Provider → 上游",
+      "labels": ["curl", "HTTP handler", "Provider", "Mock LLM"],
+      "narration": "第一课先只做一件事：把客户端请求转给上游，再把响应送回来。HTTP handler 负责入口和协议，Provider 负责调用上游。先用本地 Mock 观察请求转发；Mock 只返回固定文本，它证明链路跑通，不代表模型真的理解问题。"
+    },
+    {
+      "id": "routing",
+      "title": "模型名是档位，配置才选供应商",
+      "kicker": "02 · 候选与有限 fallback",
+      "summary": "同组择优占用 · 组间按规则回退",
+      "labels": ["economy", "balanced", "powerful", "candidate groups"],
+      "narration": "完整网关把客户端模型名分成 economy、balanced 和 powerful 三档。每一档映射到有序的候选组：同一组按占用比例最小来选择，组之间按顺序进行有限 fallback。只有特定错误会触发回退，参数也不会被悄悄删掉，所以备用模型必须支持同样的请求能力。"
+    },
+    {
+      "id": "streaming",
+      "title": "流式响应，资源直到结束才释放",
+      "kicker": "03 · SSE 与生命周期",
+      "summary": "收到响应头 ≠ 请求完成",
+      "labels": ["data: chunk", "Flush", "context cancel", "Body.Close"],
+      "narration": "流式接口用 SSE 把答案分成多个事件，网关读到一块就可以刷新给客户端。收到响应头或第一块数据，都不表示调用结束。完整结束事件到达，或者客户端断开并触发取消之后，读取退出并关闭响应体，供应商并发名额才会归还。"
+    },
+    {
+      "id": "capacity",
+      "title": "容量是座位，不是排队承诺",
+      "kicker": "04 · 并发与背压",
+      "summary": "有限名额 · 满载返回 503 · 不无限缓存",
+      "labels": ["stream slots", "provider capacity", "backpressure", "503"],
+      "narration": "模型调用可能要等很久，因此即使请求几乎不占 CPU，它仍占着连接、缓冲和供应商容量。网关用有限名额限制这些在途工作；名额满了就返回 503，而不是堆进无界内存队列。客户端接收变慢时，网关会暂停继续读取，避免无限缓存答案。"
+    },
+    {
+      "id": "jobs",
+      "title": "长工作交给持久化任务",
+      "kicker": "05 · SQLite 与 worker",
+      "summary": "先提交任务，再查询结果",
+      "labels": ["queued", "running", "completed", "done"],
+      "narration": "如果客户端不必一直等待，可以提交一个后台任务。网关先在 SQLite 保存记录，再返回二零二和任务编号；固定数量的 worker 在后台调用模型并保存结果。进程重启时，未完成的调用可能重新执行，所以恢复语义不是恰好一次，不能承诺上游只计费一次。"
+    },
+    {
+      "id": "rate-limit",
+      "title": "请求速率和并发是两道门",
+      "kicker": "07 · 令牌桶",
+      "summary": "令牌桶管新请求 · 容量名额管在途工作",
+      "labels": ["rate", "burst", "429", "503"],
+      "narration": "令牌桶控制单位时间能进入多少个新请求，令牌不足时返回四二九。并发名额控制当前还没结束的工作，容量不足时返回五零三。一个管到达速度，一个管在途资源；请求很慢时，只设置速率上限仍然不够。"
+    },
+    {
+      "id": "next-steps",
+      "title": "从 Mock 开始，沿着资源往下读",
+      "kicker": "本地实验 · 下一步",
+      "summary": "运行 → 观察 → 读实现 → 做失败实验",
+      "labels": ["3 × Mock", "localhost:8080", "lessons/", "internal/"],
+      "narration": "开始实验时，先启动三个本地 Mock，再运行完整网关，用 curl 发一次非流式请求，然后把 stream 改成 true 观察事件。接着从 lessons 第一课读到 internal gateway，再看 jobs、压测和限流。每个资源都问一句：谁获得它，什么时候释放？"
+    }
+  ]
+}

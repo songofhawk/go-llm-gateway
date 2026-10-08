@@ -1,0 +1,59 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
+flowchart TB
+    accTitle: Server、ReverseProxy 与 Transport 的分工
+    accDescr: 入站请求经Server调用gateway handler，handler交给ReverseProxy，ReverseProxy通过Transport调用上游。响应沿相反方向返回。
+    C["客户端<br/>curl"]
+    subgraph G["Go 网关"]
+        direction LR
+        S["http.Server<br/>调用 gateway handler"] <-->|"请求与响应"| P["ReverseProxy<br/>改写请求 · 转回响应"]
+        P <-->|"出站调用"| T["http.Transport<br/>连接上游 · 复用连接"]
+    end
+    U["模型服务"]
+    C <-->|"入站连接 · 由 Server 接收"| G
+    G <-->|"出站连接 · 由 Transport 发起"| U
+    classDef client fill:#E7F3EF,stroke:#448675,color:#234B42,stroke-width:1.5px;
+    classDef server fill:#EAF0FA,stroke:#6285B7,color:#29466D,stroke-width:1.5px;
+    classDef proxy fill:#F0EBF8,stroke:#9173AD,color:#58436B,stroke-width:1.5px;
+    classDef upstream fill:#FFF3DF,stroke:#BD9553,color:#70552A,stroke-width:1.5px;
+    class C client;
+    class S server;
+    class P proxy;
+    class T,U upstream;
+    style G fill:#F7F8FB,stroke:#CDD6E0,color:#33445B;

@@ -1,0 +1,51 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
+flowchart LR
+    accTitle: Director 怎样改写出站请求
+    accDescr: ReverseProxy克隆入站请求后调用Director，只改写目标地址路径Host与Authorization，JSON请求体保留原样。
+    IN["入站请求<br/>目标 localhost:8081<br/>路径 /v1/chat/completions<br/>调用方的 Authorization"] --> CL["ReverseProxy 克隆请求<br/>得到 outreq"]
+    CL --> D["Director(outreq)<br/>读取闭包中的 upstreamBase 和 apiKey"]
+    D --> OUT["出站请求<br/>目标 localhost:9090<br/>路径 /v1/chat/completions<br/>Authorization: Bearer demo-only"]
+    B["请求体中的 model、messages、stream"] -.->|"不解析、不改写"| OUT
+    classDef incoming fill:#E7F3EF,stroke:#448675,color:#234B42;
+    classDef proxy fill:#F0EBF8,stroke:#8E77B0,color:#584174;
+    classDef upstream fill:#FFF3DE,stroke:#C49A4A,color:#71531F;
+    class IN,B incoming;
+    class CL,D proxy;
+    class OUT upstream;

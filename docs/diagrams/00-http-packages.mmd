@@ -1,0 +1,57 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
+flowchart LR
+    accTitle: 标准库包在一次代理工作中的位置
+    accDescr: net/http接收请求，io读取请求体，httputil负责代理，net/url提供目标地址，context传递取消，encoding/json生成本地错误响应。
+    S["net/http<br/>接收请求"] --> I["io<br/>读取请求体"]
+    I --> P["net/http/httputil<br/>执行反向代理"]
+    P --> T["net/http<br/>Transport 调用上游"]
+    U["net/url<br/>解析目标地址"] -.->|"提供目标"| P
+    C["context<br/>取消与截止时间"] -.->|"控制生命周期"| P
+    I -->|"读取失败时"| E["encoding/json<br/>生成本地错误响应"]
+    classDef server fill:#EAF0FA,stroke:#6285B7,color:#29466D,stroke-width:1.5px;
+    classDef input fill:#E7F3EF,stroke:#448675,color:#234B42,stroke-width:1.5px;
+    classDef proxy fill:#F0EBF8,stroke:#9173AD,color:#58436B,stroke-width:1.5px;
+    classDef upstream fill:#FFF3DF,stroke:#BD9553,color:#70552A,stroke-width:1.5px;
+    classDef error fill:#FBECE8,stroke:#C77F70,color:#7B473C,stroke-width:1.5px;
+    class S server;
+    class I input;
+    class P,C proxy;
+    class T,U upstream;
+    class E error;

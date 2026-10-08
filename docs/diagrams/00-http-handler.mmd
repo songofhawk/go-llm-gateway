@@ -1,0 +1,53 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
+flowchart TB
+    accTitle: Server 调用 handler，Request 是输入，ResponseWriter 是输出
+    accDescr: net/http服务器收到请求后构造Request与ResponseWriter，回调Handler.ServeHTTP。handler读Request并通过ResponseWriter写响应。
+    C["客户端"] -->|"发来请求"| S["http.Server<br/>接收请求"]
+    S -->|"回调 Handler.ServeHTTP(w, r)"| H["handler<br/>处理请求"]
+    R["r · *http.Request<br/>方法 · URL · Header · Body"] -.->|"读取输入"| H
+    H -->|"设置头、状态码，写 Body"| W["w · http.ResponseWriter<br/>响应写入出口"]
+    W -->|"返回响应"| C
+    S -.->|"提供入参 r"| R
+    classDef client fill:#E7F3EF,stroke:#448675,color:#234B42,stroke-width:1.5px;
+    classDef server fill:#EAF0FA,stroke:#6285B7,color:#29466D,stroke-width:1.5px;
+    classDef handler fill:#F0EBF8,stroke:#9173AD,color:#58436B,stroke-width:1.5px;
+    class C,R client;
+    class S,W server;
+    class H handler;

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Go LLM Gateway · 项目导览</title>
+    <script src="./node_modules/gsap/dist/gsap.min.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0b1020; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+      .clip { position: absolute; inset: 0; }
+    </style>
+  </head>
+  <body>
+    <main id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="196.406">
+
+      <div id="opening" class="clip" data-composition-id="opening" data-composition-src="compositions/opening.html" data-start="0" data-duration="18.956" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <audio id="voice-opening" src="assets/voice/opening.mp3" data-start="0" data-duration="18.456" data-track-index="10"></audio>
+
+      <div id="roadmap" class="clip" data-composition-id="roadmap" data-composition-src="compositions/roadmap.html" data-start="18.956" data-duration="20.468" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <audio id="voice-roadmap" src="assets/voice/roadmap.mp3" data-start="18.956" data-duration="19.968" data-track-index="10"></audio>
+
+      <div id="request" class="clip" data-composition-id="request" data-composition-src="compositions/request.html" data-start="39.424" data-duration="21.86" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <audio id="voice-request" src="assets/voice/request.mp3" data-start="39.424" data-duration="21.360" data-track-index="10"></audio>
+
+      <div id="routing" class="clip" data-composition-id="routing" data-composition-src="compositions/routing.html" data-start="61.284" data-duration="22.772" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <audio id="voice-routing" src="assets/voice/routing.mp3" data-start="61.284" data-duration="22.272" data-track-index="10"></audio>
+
+      <div id="streaming" class="clip" data-composition-id="streaming" data-composition-src="compositions/streaming.html" data-start="84.056" data-duration="22.724" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <audio id="voice-streaming" src="assets/voice/streaming.mp3" data-start="84.056" data-duration="22.224" data-track-index="10"></audio>
+
+      <div id="capacity" class="clip" data-composition-id="capacity" data-composition-src="compositions/capacity.html" data-start="106.78" data-duration="24.284" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <audio id="voice-capacity" src="assets/voice/capacity.mp3" data-start="106.78" data-duration="23.784" data-track-index="10"></audio>
+
+      <div id="jobs" class="clip" data-composition-id="jobs" data-composition-src="compositions/jobs.html" data-start="131.064" data-duration="24.236" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <audio id="voice-jobs" src="assets/voice/jobs.mp3" data-start="131.064" data-duration="23.736" data-track-index="10"></audio>
+
+      <div id="rate-limit" class="clip" data-composition-id="rate-limit" data-composition-src="compositions/rate-limit.html" data-start="155.3" data-duration="19.436" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <audio id="voice-rate-limit" src="assets/voice/rate-limit.mp3" data-start="155.3" data-duration="18.936" data-track-index="10"></audio>
+
+      <div id="next-steps" class="clip" data-composition-id="next-steps" data-composition-src="compositions/next-steps.html" data-start="174.736" data-duration="21.67" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <audio id="voice-next-steps" src="assets/voice/next-steps.mp3" data-start="174.736" data-duration="20.520" data-track-index="10"></audio>
+    </main>
+    <script>
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>

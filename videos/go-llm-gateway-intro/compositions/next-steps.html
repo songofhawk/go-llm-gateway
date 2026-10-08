@@ -1,0 +1,95 @@
+
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>从 Mock 开始，沿着资源往下读</title></head><body>
+  <template>
+    <style>
+  :root { --bg: #0b1020; --fg: #f3f6fc; --muted: #9aa9bf; --mint: #59ead9; --violet: #b6bcff; --amber: #ffca74; --blue: #91c5ff; }
+  * { box-sizing: border-box; }
+  #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; padding: 82px 132px 0; color: var(--fg); background: radial-gradient(ellipse at 74% 43%, #192647 0%, var(--bg) 55%); font-family: system-ui, sans-serif; }
+  #root::before { content: ""; position: absolute; inset: 0; opacity: .18; background-image: linear-gradient(rgba(162,180,216,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(162,180,216,.10) 1px, transparent 1px); background-size: 64px 64px; mask-image: linear-gradient(90deg, transparent, black 20%, black 90%, transparent); }
+  .scene-header { position: relative; z-index: 2; }
+  .kicker { color: var(--mint); font: 600 22px/1.2 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; display: flex; align-items: center; gap: 13px; }
+  .live-dot { width: 10px; height: 10px; display: inline-block; border-radius: 50%; background: var(--mint); box-shadow: 0 0 22px rgba(66,214,197,.7); }
+  .scene-title { margin: 24px 0 27px; max-width: 1500px; font-size: 70px; line-height: 1.15; font-weight: 720; letter-spacing: -.045em; }
+  .scene-summary { margin: 0; color: var(--muted); font-size: 31px; line-height: 1.35; }
+  .diagram-stage { position: absolute; z-index: 1; left: 170px; top: 300px; width: 1580px; height: 500px; overflow: visible; }
+  .routes { position: absolute; inset: 0; width: 1580px; height: 500px; overflow: visible; }
+  .route-line { fill: none; stroke: rgba(66,214,197,.85); stroke-width: 4; stroke-linecap: round; filter: drop-shadow(0 0 8px rgba(66,214,197,.25)); }
+  .stage-node { position: absolute; left: 50%; top: 50%; width: 270px; min-height: 126px; padding: 22px 25px 20px; border: 1px solid rgba(163,181,221,.24); border-radius: 18px; background: linear-gradient(145deg, rgba(27,39,65,.98), rgba(16,24,42,.98)); box-shadow: 0 18px 55px rgba(0,0,0,.28); display: flex; flex-direction: column; justify-content: center; will-change: transform, opacity; }
+  .stage-node strong { margin-top: 5px; font-size: 30px; line-height: 1.2; letter-spacing: -.025em; white-space: nowrap; }
+  .stage-node small { margin-top: 9px; color: var(--muted); font-size: 20px; line-height: 1.35; white-space: nowrap; }
+  .node-kicker { color: var(--mint); font: 600 14px/1.1 ui-monospace, monospace; letter-spacing: .12em; }
+  .tone-mint { border-color: rgba(66,214,197,.44); }
+  .tone-violet { border-color: rgba(164,170,255,.48); }
+  .tone-violet .node-kicker { color: var(--violet); }
+  .tone-blue { border-color: rgba(123,183,255,.45); }
+  .tone-blue .node-kicker { color: var(--blue); }
+  .tone-amber { border-color: rgba(255,202,116,.5); }
+  .tone-amber .node-kicker { color: var(--amber); }
+  .stage-mark { position: absolute; right: 7px; bottom: -22px; color: rgba(200,215,241,.88); font: 600 18px/1 ui-monospace, monospace; letter-spacing: .1em; }
+  .scene-footer { position: absolute; left: 132px; right: 132px; bottom: 42px; z-index: 2; }
+  .voice-caption { min-height: 90px; margin: 0 0 23px; max-width: 1570px; color: #e0e7f4; font-size: 30px; line-height: 1.48; letter-spacing: .005em; }
+  .progress { height: 3px; width: 100%; background: rgba(148,165,197,.18); }
+  .progress-fill { display: block; width: 100%; height: 100%; transform: scaleX(0); background: linear-gradient(90deg, var(--mint), var(--blue)); }
+  .footer-meta { margin-top: 17px; display: flex; justify-content: space-between; color: #b0bfd6; font: 600 15px/1 ui-monospace, monospace; letter-spacing: .15em; }
+</style>
+    <div id="root" data-composition-id="next-steps" data-width="1920" data-height="1080" data-duration="21.67">
+        <header class="scene-header">
+          <div class="kicker"><span class="live-dot"></span>本地实验 · 下一步</div>
+          <h1 class="scene-title">从 Mock 开始，沿着资源往下读</h1>
+          <p class="scene-summary">运行 → 观察 → 读实现 → 做失败实验</p>
+        </header>
+        <div class="diagram-stage">
+          <svg class="routes" viewBox="0 0 1580 500" aria-hidden="true"><path class="route-line" data-link-index="0" d="M 290 125 Q 540 100 790 125" /><path class="route-line" data-link-index="1" d="M 790 125 Q 1040 100 1290 125" /><path class="route-line" data-link-index="2" d="M 1290 125 Q 1040 235 790 395" /></svg>
+          
+          <div class="stage-node tone-mint" data-target-x="-500" data-target-y="-125" data-node-index="0">
+            <span class="node-kicker">01</span>
+            <strong>启动 3 个 Mock</strong>
+            <small>端口 9090–9092</small>
+          </div>
+          <div class="stage-node tone-violet" data-target-x="0" data-target-y="-125" data-node-index="1">
+            <span class="node-kicker">02</span>
+            <strong>运行 gateway</strong>
+            <small>localhost:8080</small>
+          </div>
+          <div class="stage-node tone-blue" data-target-x="500" data-target-y="-125" data-node-index="2">
+            <span class="node-kicker">03</span>
+            <strong>curl 发请求</strong>
+            <small>观察 JSON / SSE</small>
+          </div>
+          <div class="stage-node tone-amber" data-target-x="0" data-target-y="145" data-node-index="3">
+            <span class="node-kicker">04</span>
+            <strong>继续读源码</strong>
+            <small>lessons/ → internal/</small>
+          </div>
+          <div class="stage-mark">09 / 9</div>
+        </div>
+        <div class="scene-footer">
+          <p class="voice-caption">开始实验时，先启动三个本地 Mock，再运行完整网关，用 curl 发一次非流式请求，然后把 stream 改成 true 观察事件。接着从 lessons 第一课读到 internal gateway，再看 jobs、压测和限流。每个资源都问一句：谁获得它，什么时候释放？</p>
+          <div class="progress"><span class="progress-fill" style="transform-origin:left center" data-progress="21.67"></span></div>
+          <div class="footer-meta"><span>GO LLM GATEWAY</span><span>09 — 09</span></div>
+        </div>
+    </div>
+    <script>
+      const timeline = gsap.timeline({ paused: true });
+      const root = document.getElementById("root");
+      root.querySelectorAll(".route-line").forEach((path, i) => {
+        const length = path.getTotalLength();
+        path.style.strokeDasharray = String(length);
+        path.style.strokeDashoffset = String(length);
+        timeline.to(path, { strokeDashoffset: 0, duration: 0.58, ease: "power2.out" }, 0.50 + i * 0.13);
+      });
+      timeline.fromTo(root.querySelector(".scene-title"), { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.58, ease: "power3.out" }, 0.15);
+      timeline.fromTo(root.querySelector(".voice-caption"), { y: 13, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: "power2.out" }, 0.32);
+      root.querySelectorAll(".stage-node").forEach((node, i) => {
+        timeline.fromTo(node,
+          { xPercent: -50, yPercent: -50, x: 0, y: 0, scale: 0.72, opacity: 0 },
+          { x: Number(node.dataset.targetX), y: Number(node.dataset.targetY), scale: 1, opacity: 1, duration: 1.0, ease: "power3.out" },
+          0.38 + i * 0.055,
+        );
+      });
+      timeline.fromTo(root.querySelector(".progress-fill"), { scaleX: 0 }, { scaleX: 1, duration: 21.57, ease: "none" }, 0.05);
+      window.__timelines["next-steps"] = timeline;
+    </script>
+  </template>
+</body></html>

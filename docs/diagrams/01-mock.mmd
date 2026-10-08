@@ -1,0 +1,55 @@
+%%{init: {
+  "theme": "base",
+  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
+  "themeVariables": {
+    "fontSize": "16px",
+    "primaryColor": "#eef4fa",
+    "primaryTextColor": "#203247",
+    "primaryBorderColor": "#8496ab",
+    "lineColor": "#6b7d91",
+    "secondaryColor": "#eaf6f1",
+    "tertiaryColor": "#fff4df",
+    "noteBkgColor": "#fff4df",
+    "noteTextColor": "#61491f",
+    "noteBorderColor": "#b4a17d",
+    "actorBkg": "#eef4fa",
+    "actorBorder": "#8496ab",
+    "actorTextColor": "#203247",
+    "edgeLabelBackground": "#FFFFFF"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 38,
+    "useMaxWidth": true
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "wrap": true,
+    "actorMargin": 40,
+    "width": 150,
+    "messageMargin": 30,
+    "noteMargin": 12
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}}%%
+flowchart TB
+    accTitle: Mock 的结构体、构造函数和路由关系
+    accDescr: Mock的main读取settings后调用newMockServer，后者用newMock创建ServeMux并保存为Server.Handler。路由函数捕获配置和统计计数，生成时调用wait与mockChunk。
+    M["Mock 的 main"] -->|"读取命令行参数"| CFG["cfg · settings<br/>delay、chunks、chunkBytes 等"]
+    CFG --> N["newMockServer(addr, cfg)<br/>创建连接计数和 *http.Server"]
+    N --> F["newMock(cfg)<br/>创建 stats · *counters"]
+    F --> X["*http.ServeMux<br/>注册 /healthz、/stats、/v1/chat/completions"]
+    X -->|"保存为 server.Handler"| S["Mock 的 *http.Server"]
+    X --> H["POST 路由函数<br/>解析 model 和 stream；统计请求"]
+    H --> W["wait(ctx, delay)<br/>等待或响应取消"]
+    H --> B["mockChunk(i, chunkBytes)<br/>生成 block1、block2…"]
+    classDef server fill:#EAF0FA,stroke:#6285B7,color:#29466D;
+    classDef config fill:#FFF3DE,stroke:#C49A4A,color:#71531F;
+    classDef handler fill:#F0EBF8,stroke:#8E77B0,color:#584174;
+    class M,N,X,S server;
+    class CFG,B config;
+    class F,H,W handler;

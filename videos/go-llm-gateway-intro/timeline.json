@@ -1,0 +1,68 @@
+{
+  "duration": 196.406,
+  "scenes": [
+    {
+      "id": "opening",
+      "index": 1,
+      "start": 0,
+      "duration": 18.956,
+      "voice": "assets/voice/opening.mp3"
+    },
+    {
+      "id": "roadmap",
+      "index": 2,
+      "start": 18.956,
+      "duration": 20.468,
+      "voice": "assets/voice/roadmap.mp3"
+    },
+    {
+      "id": "request",
+      "index": 3,
+      "start": 39.424,
+      "duration": 21.86,
+      "voice": "assets/voice/request.mp3"
+    },
+    {
+      "id": "routing",
+      "index": 4,
+      "start": 61.284,
+      "duration": 22.772,
+      "voice": "assets/voice/routing.mp3"
+    },
+    {
+      "id": "streaming",
+      "index": 5,
+      "start": 84.056,
+      "duration": 22.724,
+      "voice": "assets/voice/streaming.mp3"
+    },
+    {
+      "id": "capacity",
+      "index": 6,
+      "start": 106.78,
+      "duration": 24.284,
+      "voice": "assets/voice/capacity.mp3"
+    },
+    {
+      "id": "jobs",
+      "index": 7,
+      "start": 131.064,
+      "duration": 24.236,
+      "voice": "assets/voice/jobs.mp3"
+    },
+    {
+      "id": "rate-limit",
+      "index": 8,
+      "start": 155.3,
+      "duration": 19.436,
+      "voice": "assets/voice/rate-limit.mp3"
+    },
+    {
+      "id": "next-steps",
+      "index": 9,
+      "start": 174.736,
+      "duration": 21.67,
+      "voice": "assets/voice/next-steps.mp3"
+    }
+  ]
+}
