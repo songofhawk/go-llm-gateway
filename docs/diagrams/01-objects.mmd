@@ -1,41 +1,38 @@
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 flowchart TB
     accTitle: 第一课的对象与方法关系
     accDescr: Server的Handler保存gateway指针，gateway的proxy字段保存ReverseProxy指针，ReverseProxy共用Transport并持有请求与响应回调。

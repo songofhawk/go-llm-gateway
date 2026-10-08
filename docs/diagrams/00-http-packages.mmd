@@ -1,41 +1,38 @@
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 flowchart LR
     accTitle: 标准库包在一次代理工作中的位置
     accDescr: net/http接收请求，io读取请求体，httputil负责代理，net/url提供目标地址，context传递取消，encoding/json生成本地错误响应。

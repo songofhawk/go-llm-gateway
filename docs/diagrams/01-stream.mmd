@@ -1,41 +1,38 @@
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 sequenceDiagram
     accTitle: Mock 的两种输出怎样经过同一份代理代码
     accDescr: Mock解析stream字段决定等待后完整编码JSON或逐步发送SSE；网关两种模式都通过ReverseProxy复制响应体，不解析事件。示例使用5步和700毫秒间隔。

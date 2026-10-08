@@ -25,44 +25,41 @@ func (g *gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 `(g *gateway)` 是接收者：说明这个方法属于 `*gateway`。方法写在结构体定义外面，所以你在 `type gateway struct` 里面看不到它。Go 的 `http.Handler` 接口只要求实现 `ServeHTTP(http.ResponseWriter, *http.Request)`；这个方法满足要求，因此 `*gateway` 可以作为 handler，无需额外声明“实现接口”。
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 flowchart TB
     accTitle: 第一课的对象与方法关系
     accDescr: Server的Handler保存gateway指针，gateway的proxy字段保存ReverseProxy指针，ReverseProxy共用Transport并持有请求与响应回调。
@@ -108,44 +105,41 @@ server := &http.Server{
 Go 会先执行 `newGateway(base, apiKey, transport)`，得到返回值，再把它存入 `Handler`。`newGateway` 最后返回的是 `&gateway{proxy: proxy}`，所以 `server.Handler` 实际保存了一个 `*gateway`。
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 sequenceDiagram
     accTitle: main 启动时创建和配置哪些对象
     accDescr: main先校验地址并创建Transport，newGateway配置ReverseProxy后返回gateway指针，再把它交给Server的Handler字段，最后开始监听。
@@ -185,44 +179,41 @@ sequenceDiagram
 下面画的是一个通过检查的普通 HTTP POST 请求。图中既有本课的方法，也有 Go 标准库内部的关键调用；省略了标准库的连接调度和报文解析细节。
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 sequenceDiagram
     accTitle: 一个合法 POST 请求的实际调用链
     accDescr: net/http调用gateway的ServeHTTP，gateway读取并恢复请求体后调用ReverseProxy，后者依次调用Director、Transport.RoundTrip和ModifyResponse，再逐段写回响应。
@@ -281,44 +272,41 @@ g.proxy.ServeHTTP(w, r.WithContext(ctx))
 这个方法里的顺序直接决定哪些请求能到上游。失败分支会写回错误并 `return`；只有通过全部检查，才会走到 `g.proxy.ServeHTTP`。
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 flowchart TD
     accTitle: gateway.ServeHTTP 的检查和转发顺序
     accDescr: 先检查路径方法与查询参数，再读取受限请求体，恢复可读取的Body并创建超时context，最后调用内层代理；检查失败就直接结束。
@@ -375,44 +363,41 @@ g.proxy.ServeHTTP(w, r.WithContext(ctx))
 其中 `Director` 是实际改变目标请求的地方。它接收的是 ReverseProxy 克隆出的出站请求；这里的 `req` 和外层 `ServeHTTP` 的 `r` 是不同函数中的参数名。
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 flowchart LR
     accTitle: Director 怎样改写出站请求
     accDescr: ReverseProxy克隆入站请求后调用Director，只改写目标地址路径Host与Authorization，JSON请求体保留原样。
@@ -463,44 +448,41 @@ proxy.Director = func(req *http.Request) {
 Mock 的入口也叫 `main`，但它在另一个目录，是通过 `go run ./cmd/mock-provider` 启动的另一个进程。网关不会直接调用 Mock 的 Go 函数；两个程序之间通过 HTTP 通信。
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 flowchart TB
     accTitle: Mock 的结构体、构造函数和路由关系
     accDescr: Mock的main读取settings后调用newMockServer，后者用newMock创建ServeMux并保存为Server.Handler。路由函数捕获配置和统计计数，生成时调用wait与mockChunk。
@@ -536,44 +518,41 @@ flowchart TB
 下面的图只展开上游生成与内层代理的响应复制，完整的入口调用见第 3 节。真正的 `if !req.Stream` 出现在 Mock 里。普通模式等待全部生成间隔，把 `mockChunk` 产生的块拼起来，用 `json.Encoder` 一次输出。流式模式每隔一个间隔用 `fmt.Fprintf` 写一段 `data: ...\n\n`，再调用 `http.ResponseController.Flush()`。
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 sequenceDiagram
     accTitle: Mock 的两种输出怎样经过同一份代理代码
     accDescr: Mock解析stream字段决定等待后完整编码JSON或逐步发送SSE；网关两种模式都通过ReverseProxy复制响应体，不解析事件。示例使用5步和700毫秒间隔。
@@ -615,44 +594,41 @@ sequenceDiagram
 外层创建的 context 有两个取消来源：下游断开，以及 2 分钟时限到达。它们都会传到正在执行的上游 HTTP 请求。
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 flowchart TB
     accTitle: 下游取消怎样传到上游
     accDescr: 客户端断开后net/http取消入站context，WithTimeout派生的context随之取消，Transport中止上游HTTP请求，Mock的请求context随连接终止而取消，wait退出。

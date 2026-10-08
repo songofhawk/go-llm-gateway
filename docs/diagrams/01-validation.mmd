@@ -1,41 +1,38 @@
-%%{init: {
-  "theme": "base",
-  "fontFamily": "Arial, PingFang SC, Microsoft YaHei, sans-serif",
-  "themeVariables": {
-    "fontSize": "16px",
-    "primaryColor": "#eef4fa",
-    "primaryTextColor": "#203247",
-    "primaryBorderColor": "#8496ab",
-    "lineColor": "#6b7d91",
-    "secondaryColor": "#eaf6f1",
-    "tertiaryColor": "#fff4df",
-    "noteBkgColor": "#fff4df",
-    "noteTextColor": "#61491f",
-    "noteBorderColor": "#b4a17d",
-    "actorBkg": "#eef4fa",
-    "actorBorder": "#8496ab",
-    "actorTextColor": "#203247",
-    "edgeLabelBackground": "#FFFFFF"
-  },
-  "flowchart": {
-    "htmlLabels": false,
-    "curve": "linear",
-    "nodeSpacing": 30,
-    "rankSpacing": 38,
-    "useMaxWidth": true
-  },
-  "sequence": {
-    "useMaxWidth": true,
-    "wrap": true,
-    "actorMargin": 40,
-    "width": 150,
-    "messageMargin": 30,
-    "noteMargin": 12
-  },
-  "state": {
-    "useMaxWidth": true
-  }
-}}%%
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
 flowchart TD
     accTitle: gateway.ServeHTTP 的检查和转发顺序
     accDescr: 先检查路径方法与查询参数，再读取受限请求体，恢复可读取的Body并创建超时context，最后调用内层代理；检查失败就直接结束。
