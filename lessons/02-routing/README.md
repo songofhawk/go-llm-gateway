@@ -6,7 +6,11 @@
 
 ## 本课要理解什么
 
+完整代码导读：[第 2 课：从固定代理走到模型路由与 fallback](../../docs/02-routing.md)。正文先对照第一课说明结构与行为变化，再解释路由和 fallback，最后沿启动、请求处理和响应清理拆解源码；配套图与第一课使用相同的彩色 Mermaid 风格。
+
 这一课把第一课的一个 ReverseProxy 拆成 HTTP、路由、供应商协议三层。
+
+网关本身分为两个包：`cmd/gateway` 的 `package main` 负责配置、组装、启动与停机，`internal/gateway` 的 `package gateway` 负责网关功能。三层按文件组织在同一个 `gateway` 包内；Mock 则是另一个目录中的独立 `main` 包。配套教程第 6 节解释拆包原因，以及模块、导入路径、`cmd` / `internal`、导出名称和测试等 Go 规则与约定。
 
 `model=economy` 是客户端提出的逻辑档次；`config.example.json` 把它映射到 `demo-small` 等真实模型。同组先轮转选择一个候选，408/429/5xx 或网络错误可尝试下一个；其他 4xx 直接失败。每个候选最多尝试一次，整个调用和单候选都有时间预算。
 
@@ -14,7 +18,7 @@ SSE 先读取首块再交给 HTTP 层；首块交付后出现故障就中止，�
 
 这一阶段尚未统计供应商在途数量，也没有容量门或读写空闲时限。因此轮转不考虑哪个端点更忙。第 3 课把 `choose` 扩展成同时选择并占位的 `acquire`。
 
-阅读顺序：[types.go](internal/gateway/types.go) → [provider.go](internal/gateway/provider.go) → [router.go](internal/gateway/router.go) 的 `choose` / `Do` → [http.go](internal/gateway/http.go) 的 `chat` → [main.go](cmd/gateway/main.go)。配置中没有 `capacity` 字段。
+先认清 `Server.Handler → 认证包装 → ServeMux → API.chat → Gateway.Do → Provider.Open → Client / Transport` 的调用关系，再阅读：[main.go](cmd/gateway/main.go) 的 `run` 如何组装对象 → [http.go](internal/gateway/http.go) 的 `Handler` / `chat` → [types.go](internal/gateway/types.go) 的 `ParseRequest` → [router.go](internal/gateway/router.go) 的 `choose` / `Do` → [provider.go](internal/gateway/provider.go) 的 `Open` → 回到 `router.go` 和 `http.go` 看 `Result.Body`、`ownedBody.Close` 与 `relaySSE`。配置中没有 `capacity` 字段。
 
 验证路由和错误边界：
 

@@ -1,0 +1,53 @@
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
+flowchart TB
+    accTitle: 网络 I/O 等待时 goroutine 怎样挂起和恢复
+    accDescr: 网络读取暂时没有数据时runtime挂起当前goroutine，操作系统线程可以运行其他goroutine。网络事件就绪后，runtime把等待者重新设为可运行，再调度其继续读取。
+    A["goroutine 调用网络 Read"] --> D{"数据已就绪？"}
+    D -->|"是"| R["Read 返回<br/>继续处理数据"]
+    D -->|"否"| P["runtime 挂起当前 goroutine<br/>登记网络等待"]
+    P --> W["等待操作系统报告网络就绪事件"]
+    P -.->|"线程可以执行其他工作"| O["其他可运行 goroutine<br/>继续执行"]
+    W --> Q["网络事件就绪<br/>runtime 将等待者设为可运行"]
+    Q -->|"获得调度后恢复"| R
+    classDef server fill:#EAF0FA,stroke:#6285B7,color:#29466D,stroke-width:1.5px;
+    classDef runtime fill:#F0EBF8,stroke:#9173AD,color:#58436B,stroke-width:1.5px;
+    classDef waiting fill:#FFF3DF,stroke:#BD9553,color:#70552A,stroke-width:1.5px;
+    classDef work fill:#E7F3EF,stroke:#448675,color:#234B42,stroke-width:1.5px;
+    class A,D server;
+    class P,Q runtime;
+    class W waiting;
+    class O,R work;

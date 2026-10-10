@@ -1,0 +1,58 @@
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
+flowchart TB
+    accTitle: 第二课的两个网关包与独立Mock程序
+    accDescr: cmd/gateway的main包导入internal/gateway包。gateway包内HTTP、路由和Provider按文件组织，仍然共享同一包边界。gateway通过HTTP访问独立Mock进程，不导入Mock的main包。
+    MAIN["cmd/gateway · package main<br/>参数、环境变量、组装、启动与停机"]
+    subgraph GW["internal/gateway · package gateway"]
+        API["http.go · API<br/>入站 HTTP 处理"]
+        ROUTE["router.go · Gateway<br/>选择候选与 fallback"]
+        PROVIDER["provider.go · OpenAIProvider<br/>出站协议与请求发送"]
+        TYPES["types.go<br/>Request / Target / Provider 接口"]
+        API -->|"调用 Do"| ROUTE
+        ROUTE -->|"调用 Open"| PROVIDER
+        TYPES -.->|"同包共享定义"| ROUTE
+    end
+    MAIN -->|"import gateway；组装对象"| API
+    MOCK["cmd/mock-provider · package main<br/>独立进程；模拟上游"]
+    PROVIDER -.->|"HTTP 通信；不是 import"| MOCK
+    classDef command fill:#EAF0FA,stroke:#6285B7,color:#29466D;
+    classDef routing fill:#F0EBF8,stroke:#8E77B0,color:#584174;
+    classDef upstream fill:#FFF3DE,stroke:#C49A4A,color:#71531F;
+    class MAIN,API command;
+    class ROUTE,TYPES routing;
+    class PROVIDER,MOCK upstream;
+    style GW fill:#F8F6FC,stroke:#B9A7CE,color:#584174

@@ -1,0 +1,58 @@
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
+flowchart TB
+    accTitle: JSON与SSE响应的准备、交付和清理
+    accDescr: JSON在Do内限量读完并验证，关闭上游body与context后返回内存reader。SSE预读首块后以MultiReader拼回原流，ownedBody随HTTP层Close关闭上游body并取消两层context；后续失败不再回到路由。
+    O["Provider.Open 返回上游 body"] --> B{"r.Stream？"}
+    B -->|"false"| J["Do：读取最多 8 MiB + 1 字节<br/>检查超限与 json.Valid"]
+    J --> JC["成功：关闭上游 body<br/>取消 attempt / overall"]
+    JC --> JM["Result.Body：内存 reader<br/>HTTP 层 io.Copy 后 Close"]
+    B -->|"true"| S["Do：用 4096 字节缓冲预读<br/>n > 0 才交付"]
+    S --> M["MultiReader：预读前缀 + 原 body<br/>readerCloser + ownedBody"]
+    M --> H["HTTP 层 relaySSE<br/>循环 Read → 检测 DONE → Write → Flush"]
+    H --> END["完整 DONE 事件：正常返回<br/>读写失败或提前 EOF：中止响应"]
+    END --> CL["defer Result.Body.Close<br/>关闭上游 body；取消两层 context"]
+    J -.->|"缓冲失败"| F["关闭 body<br/>检查能否继续候选循环"]
+    S -.->|"首块未读到字节"| F
+    classDef client fill:#E7F3EF,stroke:#448675,color:#234B42;
+    classDef http fill:#EAF0FA,stroke:#6285B7,color:#29466D;
+    classDef routing fill:#F0EBF8,stroke:#8E77B0,color:#584174;
+    classDef upstream fill:#FFF3DE,stroke:#C49A4A,color:#71531F;
+    classDef error fill:#FCEBE7,stroke:#C77D6B,color:#773F33;
+    class O,JC,M,CL upstream;
+    class B,J,S,F routing;
+    class JM,H http;
+    class END client;

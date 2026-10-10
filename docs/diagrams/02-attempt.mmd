@@ -1,0 +1,63 @@
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
+flowchart TB
+    accTitle: Gateway.Do如何遍历候选并执行有限fallback
+    accDescr: Do在总context有效时按组选择未尝试的Target。一次尝试经过Open及JSON缓冲或SSE首块预读。成功返回Result，失败则关闭响应并取消attempt，检查总context及retryable后继续。
+    S["按 r.Tier 查 groups<br/>创建 overall 和 tried"] --> C{"overall 仍有效？"}
+    C -->|"否"| E["返回取消 / 超时错误"]
+    C -->|"是"| Q{"choose 当前组：还有未尝试目标？"}
+    Q -->|"否"| N{"还有下一组？"}
+    N -->|"是：进入下一组"| C
+    N -->|"否"| L["返回 last 错误"]
+    Q -->|"是"| A["记录 tried[target]<br/>创建 attempt；调用 Provider.Open"]
+    A --> V["检查 Open 结果<br/>JSON 缓冲验证 / SSE 首块预读"]
+    V --> O{"本次成功？"}
+    O -->|"是"| R["返回 Result<br/>Body 所有权交给 HTTP 层"]
+    O -->|"否"| F["关闭已拿到的 body<br/>识别 attempt 超时；cancelAttempt"]
+    F --> T{"overall 仍有效？"}
+    T -->|"否"| E
+    T -->|"是"| B{"retryable(err)？"}
+    B -->|"否"| L
+    B -->|"是：继续本组"| C
+    classDef client fill:#E7F3EF,stroke:#448675,color:#234B42;
+    classDef http fill:#EAF0FA,stroke:#6285B7,color:#29466D;
+    classDef routing fill:#F0EBF8,stroke:#8E77B0,color:#584174;
+    classDef upstream fill:#FFF3DE,stroke:#C49A4A,color:#71531F;
+    classDef error fill:#FCEBE7,stroke:#C77D6B,color:#773F33;
+    class S,C,Q,N,O,T,B routing;
+    class A,V,F upstream;
+    class E,L error;
+    class R http;

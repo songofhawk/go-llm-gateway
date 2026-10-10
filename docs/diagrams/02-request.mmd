@@ -1,0 +1,67 @@
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
+sequenceDiagram
+    accTitle: 第二课一次成功请求的调用顺序
+    accDescr: 标准库调用认证包装和ServeMux后进入API.chat。chat解析请求并调用Do，Do选择目标并调用Provider.Open，预读或缓冲成功后才返回Result，最后HTTP层转发并关闭响应体。
+    participant C as 客户端
+    participant H as API.chat
+    participant G as Gateway.Do
+    participant P as Provider.Open
+    participant U as 上游 Mock
+    rect rgb(234, 240, 250)
+    C->>H: 认证包装 → ServeMux → chat(w, r)
+    H->>H: readRequest → ParseRequest<br/>得到 Tier / Stream / Fields
+    end
+    rect rgb(240, 235, 248)
+    H->>G: Do(r.Context(), req)
+    G->>G: 创建 overall / attempt<br/>choose；记录 tried[target]
+    end
+    rect rgb(255, 243, 222)
+    G->>P: Open(attempt, target.Model, req)
+    P->>P: 复制 Fields；替换 model<br/>创建出站 HTTP 请求
+    P->>U: Client.Do(req)
+    U-->>P: HTTP 200 + 响应体
+    P-->>G: resp.Body（尚未读完）
+    end
+    rect rgb(240, 235, 248)
+    G->>G: JSON 有界缓冲并验证<br/>或 SSE 预读首块并拼回
+    G-->>H: Result{Body, Provider, Model}
+    end
+    rect rgb(231, 243, 239)
+    H->>H: defer Body.Close；设置响应头
+    H-->>C: io.Copy JSON 或 relaySSE 写入并刷新
+    H->>H: 返回或中止时执行 Body.Close
+    end

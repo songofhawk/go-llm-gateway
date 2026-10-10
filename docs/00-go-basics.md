@@ -1,6 +1,6 @@
 # 00：先认识 HTTP 和 Go 的 HTTP 标准库
 
-这页是第 1 课的预备知识，不是 Go 语法词典，也不提前逐行讲代理代码。目标是先听懂第 1 课会反复出现的词：HTTP 请求与响应、handler、`Request`、`ResponseWriter`、`Server`、`ReverseProxy` 和 `Transport`。下一页会把这些概念放进一个真正运行的代理里。
+这页是第 1 课的预备知识，不是 Go 语法词典，也不提前逐行讲代理代码。目标是先听懂第 1 课会反复出现的词：HTTP 请求与响应、handler、`Request`、`ResponseWriter`、`Server`、`ReverseProxy`、`Transport`，以及连接复用、goroutine 和网络等待。下一页会把这些概念放进一个真正运行的代理里。
 
 ## 一次 HTTP 请求是什么
 
@@ -480,6 +480,236 @@ flowchart TB
 
 因此，`Server` 面向下游，`Transport` 面向上游；`ReverseProxy` 把两边接起来。第 1 课还会用 `net/url` 解析上游基础地址，再把路径固定到 Chat Completions 接口。
 
+## HTTP 请求结束时，连接一定断开吗？
+
+一次 HTTP 请求与响应，通常通过一条 TCP 连接传输。HTTP/1.1 默认支持持久连接（keep-alive）：一份响应结束后，连接可以保留，用来发送下一次请求。下面把请求的生命周期和连接的生命周期分开画：
+
+```mermaid
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
+sequenceDiagram
+    accTitle: 一条 TCP 连接可以承载多次 HTTP 请求
+    accDescr: HTTP/1.1持久连接中，一次响应正文结束后可以保留连接，随后在同一连接发送下一次请求。响应结束和连接关闭是不同事件。
+    participant C as 客户端
+    participant S as HTTP 服务器
+    C->>S: 建立 TCP 连接
+    rect rgb(234, 240, 250)
+        C->>S: HTTP 请求 1
+        S-->>C: HTTP 响应 1，正文结束
+    end
+    Note over C,S: 保留连接，暂时空闲
+    rect rgb(231, 243, 239)
+        C->>S: HTTP 请求 2
+        S-->>C: HTTP 响应 2，正文结束
+    end
+    Note over C,S: 两次请求使用同一条 TCP 连接
+    C->>S: 稍后主动关闭或因超时结束连接
+```
+
+[查看 Mermaid 源图](diagrams/00-http-keepalive.mmd)
+
+响应的 `Content-Length` 或分块传输的结束标记，可以告诉接收方“这次正文已经结束”，无需关闭连接来表示结束。因此，读响应 `Body` 得到 EOF，也不一定表示 TCP 连接已经关闭。
+
+| 对象 | 生命周期 |
+| --- | --- |
+| 一次 HTTP 请求与响应 | 从发送请求到接收完这次响应 |
+| 一条 TCP 连接 | 可以承载多次请求；直到某一端关闭、空闲超时或发生错误 |
+
+独立执行一次 `curl` 命令时，进程通常在响应结束后退出，随之关闭连接。浏览器、SDK 或长期运行的 Go 程序则可以保留连接。`http.Transport` 管理上游连接池：响应体读完并关闭、连接符合复用条件时，可供后续请求继续使用。每次请求都新建一个 Transport，会让连接池难以发挥作用。
+
+keep-alive 描述的是连接复用；SSE 描述的是一次响应持续输出。普通的短 JSON 请求也可以使用持久连接。HTTP/2 还允许一条连接同时承载多个请求流，下面的 goroutine 示意先以本地实验常见的 HTTP/1.1 为例。
+
+## 代码没有写 go，为什么仍然能并发处理请求？
+
+**goroutine 是 Go runtime 管理的执行单元。** `go f()` 会启动一个 goroutine 执行 `f`，但启动动作也可以写在标准库里面。调用 `http.Server.ListenAndServe()` 后，标准库负责接受连接，并在内部为连接启动处理 goroutine，所以业务代码不必自己写接收连接的循环。
+
+```mermaid
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
+flowchart TB
+    accTitle: HTTP/1.1 下标准库创建 goroutine 的主要位置
+    accDescr: 主goroutine接受连接，Server为入站连接启动goroutine。handler与ReverseProxy的主要调用在同一个goroutine中进行，Transport的上游连接读写循环通过channel协作，响应体由handler调用链继续读取。
+    subgraph MAIN["主 goroutine"]
+        A["ListenAndServe<br/>等待并接受客户端连接"]
+    end
+    subgraph IN["入站连接 A 的 goroutine"]
+        H["解析请求<br/>调用 Handler.ServeHTTP"]
+        P["ReverseProxy.ServeHTTP<br/>改写并转发请求"]
+        T["Transport.RoundTrip<br/>提交发送任务，等待响应头"]
+        C["复制响应体<br/>读取上游 Body，写回下游"]
+        H --> P --> T --> C
+    end
+    B["入站连接 B 的 goroutine<br/>独立执行另一条请求调用链"]
+    subgraph OUT["Transport 的一条上游 HTTP/1.1 连接"]
+        W["writeLoop goroutine<br/>发送请求头和正文"]
+        R["readLoop goroutine<br/>解析响应头，交回 Response"]
+    end
+    A -->|"标准库内部 go 启动"| H
+    A -->|"另一个连接"| B
+    T -->|"channel 传递任务"| W
+    R -->|"channel 交回响应"| T
+    classDef client fill:#E7F3EF,stroke:#448675,color:#234B42,stroke-width:1.5px;
+    classDef server fill:#EAF0FA,stroke:#6285B7,color:#29466D,stroke-width:1.5px;
+    classDef proxy fill:#F0EBF8,stroke:#9173AD,color:#58436B,stroke-width:1.5px;
+    classDef upstream fill:#FFF3DF,stroke:#BD9553,color:#70552A,stroke-width:1.5px;
+    class A client;
+    class H,B server;
+    class P,T,C proxy;
+    class W,R upstream;
+    style MAIN fill:#F7F8FB,stroke:#CDD6E0,color:#33445B;
+    style IN fill:#F7F8FB,stroke:#CDD6E0,color:#33445B;
+    style OUT fill:#FFFBF3,stroke:#DDC9A5,color:#70552A;
+```
+
+[查看 Mermaid 源图](diagrams/00-http-goroutines.mmd)
+
+图中的框表示主要执行位置，箭头标明普通调用或内部协作；对象与 goroutine 并非一一对应。标准库在需要的位置创建 goroutine，**runtime 决定哪些可运行的 goroutine 获得线程执行**。`Server`、`ReverseProxy`、`Transport` 是普通对象，它们的方法可以在不同请求的 goroutine 中被调用。
+
+在 HTTP/1.1 下，Server 通常为每条入站连接创建处理 goroutine。同一条持久连接上的请求依次处理，不同连接可以并发处理。`Handler.ServeHTTP` 与它调用的 `ReverseProxy.ServeHTTP`，主要就在当前连接的 goroutine 中执行；普通方法调用不会自动切换 goroutine。HTTP/2 的 handler 按请求流并发运行，不能直接套用“一条连接依次处理”的模型。
+
+Transport 获取或建立上游连接，必要时有拨号 goroutine；一条上游 HTTP/1.1 连接还有 `writeLoop`、`readLoop` 等内部 goroutine，通过 channel 交接发送任务和响应。`readLoop` 取得响应头后，会交回带有可读取 `Body` 的响应对象。随后，handler 调用链中的代理复制逻辑继续读取正文并写给下游，不会等待 `readLoop` 把整个 SSE 答案收齐。
+
+| 名称 | 与 goroutine 的关系 |
+| --- | --- |
+| `http.Server` | 内部启动连接处理 goroutine，并在其中调用 handler |
+| `httputil.ReverseProxy` | 主要请求处理与响应复制在调用它的 goroutine 中执行；内部还可能有刷新回调等辅助工作 |
+| `http.Transport` | 管理连接与内部读写协作；连接复用时，相应的连接 goroutine 也继续服务后续请求 |
+| Go runtime | 把可运行的 goroutine 调度到操作系统线程，处理网络等待和唤醒 |
+
+图没有展开后台断连检测、拨号、定时回调等辅助工作；这些数量还会随协议和连接复用情况变化，不能按“一个请求固定几个 goroutine”计算。后续课程会再讲 channel 和容量限制，本课先看懂执行位置即可。
+
+## 等待网络时，会一直占用一个线程吗？
+
+goroutine 执行 Go 代码时需要操作系统线程；网络暂时没有数据可读时，runtime 可以挂起当前 goroutine，让线程执行其他可运行的 goroutine。网络就绪后，等待者重新变成可运行状态，获得调度后继续执行。这是 Go 网络 I/O 看起来使用同步 `Read`、`Write`，同时还能处理许多连接的基础。
+
+```mermaid
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
+flowchart TB
+    accTitle: 网络 I/O 等待时 goroutine 怎样挂起和恢复
+    accDescr: 网络读取暂时没有数据时runtime挂起当前goroutine，操作系统线程可以运行其他goroutine。网络事件就绪后，runtime把等待者重新设为可运行，再调度其继续读取。
+    A["goroutine 调用网络 Read"] --> D{"数据已就绪？"}
+    D -->|"是"| R["Read 返回<br/>继续处理数据"]
+    D -->|"否"| P["runtime 挂起当前 goroutine<br/>登记网络等待"]
+    P --> W["等待操作系统报告网络就绪事件"]
+    P -.->|"线程可以执行其他工作"| O["其他可运行 goroutine<br/>继续执行"]
+    W --> Q["网络事件就绪<br/>runtime 将等待者设为可运行"]
+    Q -->|"获得调度后恢复"| R
+    classDef server fill:#EAF0FA,stroke:#6285B7,color:#29466D,stroke-width:1.5px;
+    classDef runtime fill:#F0EBF8,stroke:#9173AD,color:#58436B,stroke-width:1.5px;
+    classDef waiting fill:#FFF3DF,stroke:#BD9553,color:#70552A,stroke-width:1.5px;
+    classDef work fill:#E7F3EF,stroke:#448675,color:#234B42,stroke-width:1.5px;
+    class A,D server;
+    class P,Q runtime;
+    class W waiting;
+    class O,R work;
+```
+
+[查看 Mermaid 源图](diagrams/00-http-netpoll.mmd)
+
+以代理读取流式响应为例：上游正在生成下一块内容时，当前 goroutine 可以暂停；其他连接的 handler 仍然能运行。下游读取很慢、网络写入需要等待时，也会出现类似的等待过程。goroutine 与操作系统线程没有永久的一对一绑定；很多 goroutine 并不意味着同样数量的线程，也不意味着它们都在同时使用 CPU。
+
+长响应可以让一个 handler goroutine 存在几分钟，但它等待网络的这些时间里，通常无需一直独占一个线程。等待中的 goroutine 仍然持有请求、缓冲区和连接等资源，因此后续课程还需要限制并发数量。runtime 的网络等待与调度会自动参与这些标准库调用，不需要业务代码显式导入 `runtime`。
+
 ## 响应体可以一次到齐，也可以持续到达
 
 ```mermaid
@@ -690,11 +920,12 @@ Go 文件里的 `import` 声明说明代码使用哪些包。例如导入路径 
 
 ## 带着这些概念进入第 1 课
 
-读 [第 1 步：让一个问题经过 Go 代理](01-proxy.md)，再打开[独立课程代码](../lessons/01-proxy/main.go)。先试着指出：
+读 [第 1 课：从 main 读懂一个 Go 代理](01-proxy.md)，再打开[独立课程代码](../lessons/01-proxy/main.go)。先试着指出：
 
 1. 哪一段启动接收下游请求的 `http.Server`？
 2. 哪个对象实现了 `http.Handler`？
 3. 哪个对象负责真正向模型服务发出请求？
 4. 普通 JSON 和 SSE 的响应体处理有什么差别？
+5. handler 在哪里被调用，为什么没有显式写 `go` 也能处理多个连接？
 
-如果这里的 `Handler`、`Request`、`ResponseWriter`、`Server`、`Transport` 还容易混，回到上面的角色图；不必先背 goroutine、channel 或锁。它们会在后续代码真正使用时再讲。
+如果这里的 `Handler`、`Request`、`ResponseWriter`、`Server`、`Transport` 还容易混，回到上面的角色图。goroutine 先掌握“标准库内部创建、runtime 调度、网络等待时可以挂起”这三点；第 1 课把对象关系和实际调用对上源码，后续并发课再展开 channel、锁和容量控制。

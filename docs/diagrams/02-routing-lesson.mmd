@@ -1,7 +1,51 @@
-flowchart LR
-    C[客户端 model=economy] --> G[按配置选择候选组]
-    G --> R[同组轮转选择]
-    R --> A[primary-a / demo-small]
-    R --> B[primary-b / demo-small]
-    A -. 允许重试的失败 .-> B
-    B -. 主组候选耗尽 .-> F[backup / demo-backup-small]
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
+flowchart TB
+    accTitle: 第二课的逻辑档次、组内轮转与备用组
+    accDescr: 客户端指定economy，配置映射为主组A与B及备用组。每次先调用一个候选，可重试失败继续组内尝试，主组用尽后才进入备用组。
+    C["客户端：model=economy"] --> G["查 economy 的候选组"]
+    G --> R["第一组：轮转选择一个未尝试目标"]
+    R --> A["primary-a<br/>demo-small"]
+    R --> B["primary-b<br/>demo-small"]
+    R -.->|"本组耗尽后 fallback"| F["第二组：backup<br/>demo-backup-small"]
+    classDef client fill:#E7F3EF,stroke:#448675,color:#234B42;
+    classDef http fill:#EAF0FA,stroke:#6285B7,color:#29466D;
+    classDef routing fill:#F0EBF8,stroke:#8E77B0,color:#584174;
+    classDef upstream fill:#FFF3DE,stroke:#C49A4A,color:#71531F;
+    classDef error fill:#FCEBE7,stroke:#C77D6B,color:#773F33;
+    class C client;
+    class G,R routing;
+    class A,B,F upstream;

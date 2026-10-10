@@ -1,0 +1,68 @@
+---
+config:
+  theme: "base"
+  fontFamily: "Arial, PingFang SC, Microsoft YaHei, sans-serif"
+  themeVariables:
+    fontSize: "16px"
+    primaryColor: "#eef4fa"
+    primaryTextColor: "#203247"
+    primaryBorderColor: "#8496ab"
+    lineColor: "#6b7d91"
+    secondaryColor: "#eaf6f1"
+    tertiaryColor: "#fff4df"
+    noteBkgColor: "#fff4df"
+    noteTextColor: "#61491f"
+    noteBorderColor: "#b4a17d"
+    actorBkg: "#eef4fa"
+    actorBorder: "#8496ab"
+    actorTextColor: "#203247"
+    edgeLabelBackground: "#FFFFFF"
+  flowchart:
+    htmlLabels: false
+    curve: "linear"
+    nodeSpacing: 30
+    rankSpacing: 38
+    useMaxWidth: true
+  sequence:
+    useMaxWidth: true
+    wrap: true
+    actorMargin: 40
+    width: 150
+    messageMargin: 30
+    noteMargin: 12
+  state:
+    useMaxWidth: true
+---
+flowchart TB
+    accTitle: HTTP/1.1 下标准库创建 goroutine 的主要位置
+    accDescr: 主goroutine接受连接，Server为入站连接启动goroutine。handler与ReverseProxy的主要调用在同一个goroutine中进行，Transport的上游连接读写循环通过channel协作，响应体由handler调用链继续读取。
+    subgraph MAIN["主 goroutine"]
+        A["ListenAndServe<br/>等待并接受客户端连接"]
+    end
+    subgraph IN["入站连接 A 的 goroutine"]
+        H["解析请求<br/>调用 Handler.ServeHTTP"]
+        P["ReverseProxy.ServeHTTP<br/>改写并转发请求"]
+        T["Transport.RoundTrip<br/>提交发送任务，等待响应头"]
+        C["复制响应体<br/>读取上游 Body，写回下游"]
+        H --> P --> T --> C
+    end
+    B["入站连接 B 的 goroutine<br/>独立执行另一条请求调用链"]
+    subgraph OUT["Transport 的一条上游 HTTP/1.1 连接"]
+        W["writeLoop goroutine<br/>发送请求头和正文"]
+        R["readLoop goroutine<br/>解析响应头，交回 Response"]
+    end
+    A -->|"标准库内部 go 启动"| H
+    A -->|"另一个连接"| B
+    T -->|"channel 传递任务"| W
+    R -->|"channel 交回响应"| T
+    classDef client fill:#E7F3EF,stroke:#448675,color:#234B42,stroke-width:1.5px;
+    classDef server fill:#EAF0FA,stroke:#6285B7,color:#29466D,stroke-width:1.5px;
+    classDef proxy fill:#F0EBF8,stroke:#9173AD,color:#58436B,stroke-width:1.5px;
+    classDef upstream fill:#FFF3DF,stroke:#BD9553,color:#70552A,stroke-width:1.5px;
+    class A client;
+    class H,B server;
+    class P,T,C proxy;
+    class W,R upstream;
+    style MAIN fill:#F7F8FB,stroke:#CDD6E0,color:#33445B;
+    style IN fill:#F7F8FB,stroke:#CDD6E0,color:#33445B;
+    style OUT fill:#FFFBF3,stroke:#DDC9A5,color:#70552A;
