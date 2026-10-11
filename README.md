@@ -1,6 +1,6 @@
 # Go LLM Gateway：从第一条代理请求开始
 
-这是一个循序渐进的 Go 大模型网关实践项目。从最小代理开始，逐步实现模型路由、流式传输、并发管理、持久化任务、性能分析和请求限流，理解每个设计决策及其取舍。
+这是一个循序渐进的 Go 大模型网关实践项目。从最小代理开始，逐步实现模型路由、流式传输、并发管理、会话粘性、持久化任务、性能分析和请求限流，理解每个设计决策及其取舍。
 
 ## 项目导览视频
 
@@ -26,12 +26,13 @@
 | 1 | [最小代理](docs/01-proxy.md) / [独立代码](lessons/01-proxy/README.md) | 怎样用 Go 把一次请求转发出去，并逐块返回？ |
 | 2 | [模型与 fallback](docs/02-routing.md) / [独立代码](lessons/02-routing/README.md) | 为什么 provider 与模型档次分开？何时可以重试？ |
 | 3 | [并发与生命周期](docs/03-concurrency.md) / [独立代码](lessons/03-concurrency/README.md) | 为什么长流收到 HTTP 头还不能释放名额？如何做背压？ |
-| 4 | [持久化任务](docs/04-jobs.md) / [独立代码](lessons/04-jobs/README.md) | 请求返回后谁拥有任务？重启怎么恢复？ |
-| 5 | [故障实验与设计复盘](docs/05-labs.md) / [独立代码](lessons/05-labs/README.md) | 怎样用失败实验，而不是“看起来正常”，证明设计？ |
-| 6 | [Mock 与 pprof 压测](docs/06-pprof.md) / [独立代码](lessons/06-pprof/README.md) | 真实长流负载下，CPU、内存和协程在做什么？ |
-| 7 | [请求速率限流](docs/07-rate-limiting.md) / [独立代码](lessons/07-rate-limiting/README.md) | 令牌桶与并发限制有什么区别，如何控制突发？ |
+| 4 | [会话粘性路由](docs/04-session-affinity.md) / [独立代码](lessons/04-session-affinity/README.md) | 同一会话如何固定首选，满载或故障时怎样切换？ |
+| 5 | [持久化任务](docs/05-jobs.md) / [独立代码](lessons/05-jobs/README.md) | 请求返回后谁拥有任务？重启怎么恢复？ |
+| 6 | [故障实验与设计复盘](docs/06-labs.md) / [独立代码](lessons/06-labs/README.md) | 怎样用失败实验，而不是“看起来正常”，证明设计？ |
+| 7 | [Mock 与 pprof 压测](docs/07-pprof.md) / [独立代码](lessons/07-pprof/README.md) | 真实长流负载下，CPU、内存和协程在做什么？ |
+| 8 | [请求速率限流](docs/08-rate-limiting.md) / [独立代码](lessons/08-rate-limiting/README.md) | 令牌桶与并发限制有什么区别，如何控制突发？ |
 
-**每一步都有独立、可运行的代码版本。**进入 [lessons 课程目录](lessons/README.md)，按第 1～7 课分别学习；每课包含自己的 Go 模块、Mock、源码和启动说明，可以单独复制运行。第 5 课是故障实验课，保留第 4 课的网关功能并增加可执行实验。仓库根目录的 `cmd/gateway` 保留完整参考实现。[实施计划](PLAN.md) 记录实现阶段，[验收记录](VALIDATION.md) 记录实测结果。
+**每一步都有独立、可运行的代码版本。**进入 [lessons 课程目录](lessons/README.md)，按第 1～8 课分别学习；每课包含自己的 Go 模块、Mock、源码和启动说明，可以单独复制运行。第 6 课是故障实验课，保留第 5 课的网关功能并增加可执行实验。仓库根目录的 `cmd/gateway` 保留完整参考实现。[实施计划](PLAN.md) 记录实现阶段，[验收记录](VALIDATION.md) 记录实测结果。
 
 ## 运行准备
 
@@ -52,6 +53,14 @@ Go 安装包与安装说明见 [Go 官方下载页](https://go.dev/dl/)。
 核心网关只使用标准库；异步任务使用 `database/sql` 和纯 Go SQLite 驱动 `modernc.org/sqlite`，不需要 C 编译器来运行项目（竞态检测的环境要求另见 Go 官方说明）。
 
 ## 不需要模型账号的本地演示
+
+示例配置将三个本地模拟供应商命名为 OpenAI、Anthropic 和 Google，模型档次映射如下；端点仍为 localhost。接入真实服务时需填写对应端点支持的模型 ID。
+
+| 档次 | OpenAI | Anthropic | Google（备用组） |
+| --- | --- | --- | --- |
+| economy | Luna | Haiku | Gemini Flash-Lite |
+| balanced | Terra | Sonnet | Gemini Flash |
+| powerful | Sol | Opus | Gemini Pro |
 
 在三个独立终端分别启动可控的模拟供应商：
 
@@ -96,6 +105,12 @@ curl -sS http://localhost:8080/v1/jobs/返回的任务ID
 
 按 Ctrl-C 停止网关：它停止接收请求，取消后台任务，前台最多等待 5 秒后强制取消。未完成后台任务在下次启动时恢复。
 
+## 同一会话固定首选上游
+
+第 4 课的聊天请求，以及第 5 课起的后台任务，可携带 `"gateway_session":"tenant-1/user-2/session-3"`。同一会话、同一档次在相同路由配置下优先使用固定的 `Provider + Model`，首选满载或故障才临时 fallback；下一次请求仍优先原上游。省略该字段保留普通负载均衡。
+
+会话键由调用方创建并在后续轮次复用，不是鉴权凭据。网关不保存聊天历史，也不保证供应商缓存命中。算法、Go 代码和边界实验见[第 4 课](docs/04-session-affinity.md)。
+
 ## 接入真实兼容供应商
 
 复制 `config.example.json` 为已被 Git 忽略的 `config.local.json`。将端点 `base_url` 改成供应商的 Chat Completions 基础地址（通常以 `/v1` 结尾），将 `api_key_env` 设置为环境变量名，修改各档的真实 `model`。不要把密钥写进 JSON。
@@ -105,11 +120,11 @@ curl -sS http://localhost:8080/v1/jobs/返回的任务ID
 go run ./cmd/gateway -config config.local.json
 ```
 
-配置结构：`endpoints` 定义供应商实例和总并发容量；`routes` 的每个档次是“候选组的列表”。同组按占用比例最小选择，组间按顺序 fallback。相同供应商可以映射不同模型，但共享并发容量。
+配置结构：`endpoints` 定义供应商实例和总并发容量；`routes` 的每个档次是“候选组的列表”。同组有会话键时优先使用稳定哈希确定的首选，无会话键或首选不可用时按占用比例选择；组间按顺序 fallback。相同供应商可以映射不同模型，但共享并发容量。
 
 对明确支持明文 HTTP/2 的本机或可信内网上游，可以在对应 endpoint 设置 `"h2c": true`；网关和 Mock 的 `-h2c` 参数额外开启下游明文 HTTP/2。HTTPS 上游继续使用默认的 TLS 协商，不设置 `h2c`。h2c 不提供加密，也不自动降级重发 POST。
 
-客户端的 `model` 是 `economy`（经济型）、`balanced`（均衡型）或 `powerful`（高能力型），省略时默认 `balanced`。这些名称表示路由档次，具体供应商和模型由配置映射。`messages`、`tools`、`temperature` 等其余字段透传。流式输出保留供应商 SSE，必须以完整 `data: [DONE]` 事件结束。响应头 `X-Gateway-Provider` / `X-Gateway-Model` 展示实际选择。
+客户端的 `model` 是 `economy`（经济型）、`balanced`（均衡型）或 `powerful`（高能力型），省略时默认 `balanced`。这些名称表示路由档次，具体供应商和模型由配置映射。可选的 `gateway_session` 是最多 256 字节的非空白会话键，仅用于网关路由，发送给上游前移除；`messages`、`tools`、`temperature` 等供应商字段仍透传。流式输出保留供应商 SSE，必须以完整 `data: [DONE]` 事件结束。响应头 `X-Gateway-Provider` / `X-Gateway-Model` 展示实际选择。
 
 模型兼容性由配置维护：fallback 模型也必须支持请求中的工具、多模态、推理参数。网关不偷偷删除这些参数，也不推断供应商模型能力。
 
@@ -117,7 +132,7 @@ go run ./cmd/gateway -config config.local.json
 
 - 支持 OpenAI Chat Completions **兼容协议**，未实现原生 Anthropic、Bedrock、Vertex、Responses API，也未声称完全兼容任一官方 SDK。
 - 单进程网关、单进程独占 SQLite 文件。固定 worker 与容量控制用于教学；尚无多副本租约、分布式限流、租户隔离或生产运维系统。
-- 有并发上限、负载均衡、有限 fallback；第 7 步提供可选的单进程全局请求速率限制；尚无 LLM token 配额、熔断器、自动扩容或“百万并发”保证。同步/异步共享供应商容量，尚无严格公平调度或保留配额。
+- 有并发上限、会话软粘性、负载均衡、有限 fallback；第 8 步提供可选的单进程全局请求速率限制；尚无 LLM token 配额、熔断器、自动扩容或“百万并发”保证。同步/异步共享供应商容量，尚无严格公平调度或保留配额。
 - 默认仅监听 localhost。设置 `GATEWAY_TOKEN` 后所有接口需 `Authorization: Bearer ...`；非回环监听强制要求该变量。真实对外服务仍需要 TLS 和按用户授权。
 - fallback、崩溃恢复都可能产生重复供应商调用/费用；提交端暂未实现幂等键。后处理示例是数据库内幂等更新，不能据此承诺外部邮件、扣款等副作用只发生一次。
 - 活跃任务有容量上限，历史完成记录不会自动删除；持续运行应制定保留/清理策略。磁盘满会使 worker 报错并停止服务，避免虚报任务完成。
@@ -125,10 +140,10 @@ go run ./cmd/gateway -config config.local.json
 
 ## 使用 Mock 做压力测试
 
-运行 `bash scripts/stress.sh` 自动完成七类本机场景，并保存 pprof 原始采样及请求统计。已发布的精简结果位于 `docs/stress-results`，不含 196MB 本机临时构建产物。操作步骤见 [第六课](docs/06-pprof.md)，实测结果见 [压测报告](docs/STRESS-REPORT.md)。
+运行 `bash scripts/stress.sh` 自动完成七类本机场景，并保存 pprof 原始采样及请求统计。已发布的精简结果位于 `docs/stress-results`，不含 196MB 本机临时构建产物。操作步骤见 [第七课](docs/07-pprof.md)，实测结果见 [压测报告](docs/STRESS-REPORT.md)。
 
 取消场景默认使用 h2c，让取消只结束单条流而保留 TCP 连接；其他场景仍使用原来的 HTTP/1.1。`SCENARIOS=cancel CANCEL_CONCURRENCY=64 STRESS_DURATION=60s bash scripts/stress.sh` 可验证持续取消。设置 `HTTP_PROTOCOL=http1` 保留旧协议对照，`HTTP_PROTOCOL=h2c` 则对全部选定场景启用 h2c。取消场景有非预期错误时，脚本保留报告和采样并以非零状态退出。
 
-## 第 7 步：开启请求速率限流
+## 第 8 步：开启请求速率限流
 
-完整网关增加 `-rate 10 -burst 20` 即启用全局令牌桶，聊天调用与异步提交共享额度，超限返回 429 和 Retry-After。默认两个参数均为 0，关闭速率限流；原有并发与队列上限仍然生效。算法、长流规则与实验见 [第七步教程](docs/07-rate-limiting.md)。
+完整网关增加 `-rate 10 -burst 20` 即启用全局令牌桶，聊天调用与异步提交共享额度，超限返回 429 和 Retry-After。默认两个参数均为 0，关闭速率限流；原有并发与队列上限仍然生效。算法、长流规则与实验见 [第八步教程](docs/08-rate-limiting.md)。

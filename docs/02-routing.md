@@ -4,7 +4,7 @@
 
 ## 1. 与第一课相比：为什么不再只用 ReverseProxy？
 
-[第一课](01-proxy.md)的调用关系是 `Server → gateway.ServeHTTP → ReverseProxy → Transport`。客户端发送真实模型 ID，例如 `demo-small`；网关只把请求转发到一个固定上游。第二课让客户端发送逻辑档次 `economy`，网关自己决定哪家供应商、哪个真实模型来执行，并在允许的边界内尝试备用候选。
+[第一课](01-proxy.md)的调用关系是 `Server → gateway.ServeHTTP → ReverseProxy → Transport`。客户端发送真实模型 ID，例如 `Luna`；网关只把请求转发到一个固定上游。第二课让客户端发送逻辑档次 `economy`，网关自己决定哪家供应商、哪个真实模型来执行，并在允许的边界内尝试备用候选。
 
 这要求网关在写回响应之前参与选择、请求改写与结果检查。本课不再创建 `httputil.ReverseProxy`，而是用自己的 `API`、`Gateway` 和 `Provider` 串起请求处理，底层仍由标准库 `http.Client` / `Transport` 发送 HTTP 和复用连接。
 
@@ -68,12 +68,12 @@ config:
 ---
 flowchart TB
     accTitle: 第二课的逻辑档次、组内轮转与备用组
-    accDescr: 客户端指定economy，配置映射为主组A与B及备用组。每次先调用一个候选，可重试失败继续组内尝试，主组用尽后才进入备用组。
+    accDescr: 客户端指定economy，配置映射为OpenAI、Anthropic及Google备用组。每次先调用一个候选，可重试失败继续组内尝试，主组用尽后才进入备用组。
     C["客户端：model=economy"] --> G["查 economy 的候选组"]
     G --> R["第一组：轮转选择一个未尝试目标"]
-    R --> A["primary-a<br/>demo-small"]
-    R --> B["primary-b<br/>demo-small"]
-    R -.->|"本组耗尽后 fallback"| F["第二组：backup<br/>demo-backup-small"]
+    R --> A["OpenAI<br/>Luna"]
+    R --> B["Anthropic<br/>Haiku"]
+    R -.->|"本组耗尽后 fallback"| F["第二组：Google<br/>Gemini Flash-Lite"]
     classDef client fill:#E7F3EF,stroke:#448675,color:#234B42;
     classDef http fill:#EAF0FA,stroke:#6285B7,color:#29466D;
     classDef routing fill:#F0EBF8,stroke:#8E77B0,color:#584174;
@@ -86,9 +86,9 @@ flowchart TB
 
 [查看 Mermaid 源图](diagrams/02-routing-lesson.mmd)
 
-**读图例子：**第一次请求先选 A，下一次先选 B；一次请求只先调用一个候选。A、B 都属于第一组，允许重试的失败会继续尝试组内其他候选，主组候选用尽后才考虑备用组。本课先使用轮转；按占用比例选择和满载跳过在第 3 课加入。
+**读图例子：**第一次请求先选 OpenAI，下一次先选 Anthropic；一次请求只先调用一个候选。OpenAI、Anthropic 都属于第一组，允许重试的失败会继续尝试组内其他候选，主组候选用尽后才考虑备用组。本课先使用轮转；按占用比例选择和满载跳过在第 3 课加入。
 
-客户端发出 `model=economy`；上游收到的是 `model=demo-small`。`Provider` 负责“怎样向这家服务发请求”，`Target` 则把“这家服务”和“这个真实模型”绑定在一起。
+客户端发出 `model=economy`；选中 OpenAI 时，上游收到的是 `model=Luna`；选中 Anthropic 时则是 `model=Haiku`。`Provider` 负责“怎样向这家服务发请求”，`Target` 则把“这家服务”和“这个真实模型”绑定在一起。
 
 ## 3. 沿请求走一遍
 
@@ -96,17 +96,19 @@ flowchart TB
 
 请求其余字段用 `json.RawMessage` 保留，避免因为只定义了 content 字符串就丢失多模态、工具参数或供应商扩展。每次尝试都会复制字段 map，再替换 model，不改原始 `Request.Fields`，避免污染后续 fallback 或复用同一请求的并发调用。
 
+示例配置使用 OpenAI、Anthropic 和 Google 的供应商标签，端点仍指向本地 Mock。模型名称用于演示档次映射；接入真实服务时应填写该端点支持的模型 ID。
+
 示例配置的含义：
 
 ```json
 "economy": [
-  [{"provider":"primary-a","model":"demo-small"},
-   {"provider":"primary-b","model":"demo-small"}],
-  [{"provider":"backup","model":"demo-backup-small"}]
+  [{"provider":"OpenAI","model":"Luna"},
+   {"provider":"Anthropic","model":"Haiku"}],
+  [{"provider":"Google","model":"Gemini Flash-Lite"}]
 ]
 ```
 
-第一组是两个可互换副本，本课按轮转选择。组内候选出现允许重试的失败并用尽后再走第二组。此阶段不统计在途数量，也没有供应商容量检查。可以用相同 provider 的不同 model 配置模型 fallback，也可以跨供应商。
+第一组包含 OpenAI 和 Anthropic 两个候选，本课按轮转选择。组内候选出现允许重试的失败并用尽后再走第二组。此阶段不统计在途数量，也没有供应商容量检查。可以用相同 provider 的不同 model 配置模型 fallback，也可以跨供应商。
 
 ## 4. 再看图：为什么不能写到一半换模型？
 
@@ -646,7 +648,7 @@ fields["model"], _ = json.Marshal(model)
 body, err := json.Marshal(fields)
 ```
 
-`model` 参数来自 `target.Model`，例如 `demo-small`。`r.Tier` 仍然是 `economy`；代码只把新 map 的 `model` 改成真实 ID。这里复制的是 map，`RawMessage` 的底层字节仍共享；本实现只替换字段值、不修改这些字节，因此不需要把每个值再复制一遍。
+`model` 参数来自 `target.Model`，例如 OpenAI 的 `Luna`。`r.Tier` 仍然是 `economy`；代码只把新 map 的 `model` 改成真实 ID。这里复制的是 map，`RawMessage` 的底层字节仍共享；本实现只替换字段值、不修改这些字节，因此不需要把每个值再复制一遍。
 
 随后 `http.NewRequestWithContext` 把单候选的 attempt context 绑定到 POST 请求；URL 为 endpoint 地址去掉末尾 `/` 后再拼 `/chat/completions`。示例 endpoint 以 `/v1` 结尾，因此出站路径为 `/v1/chat/completions`。认证从 `p.Key` 设置，客户端用于访问网关的 token 不会传给上游。
 
@@ -678,7 +680,7 @@ for i := 0; i < len(group); i++ {
 }
 ```
 
-这段在 mutex 内执行。`cursor` 是 `Gateway` 共享的轮转游标，`tried` 是本次 `Do` 新建的 map。模运算让下标绕回组开头；选中后游标加一，锁在 `choose` 返回时释放，后面的网络 I/O 不持锁。
+这段在 mutex 内执行。`cursor` 是 `Gateway` 共享的轮转游标，`tried` 是本次 `Do` 新建的 map。这个共享游标按请求轮转，不识别用户或 session，同一会话可能选中不同上游。[第 4 课](04-session-affinity.md)会在第 3 课容量管理的基础上加入会话软粘性。模运算让下标绕回组开头；选中后游标加一，锁在 `choose` 返回时释放，后面的网络 I/O 不持锁。
 
 注意游标是整个 Gateway 共用的，**不是每档、每组各有一个**。只连续发 economy 请求、没有失败和其他调用插入时，第一组的 A、B 会交替先被选中；混入其他档次、并发或重试会改变轮转位置。本课既不查忙闲，也不预占名额。
 
@@ -883,7 +885,7 @@ SSE 的 `Do` 返回时，上游仍可能生成后面的块。如果立刻执行 
 
 `server.BaseContext` 返回启动时创建的 `requests` context，所以入站 context、Do 的 overall 和 attempt 都继承这条取消链。5 秒宽限期耗尽时，`cancelRequests()` 取消剩余请求，再用 `server.Close()` 关闭连接。结束时还会关闭共享客户端的空闲连接。
 
-这里的 goroutine 用于运行 HTTP 服务并等待退出；后台 goroutine 本身不等于可靠任务系统。返回 202 后可查询、重启后可恢复的后台任务，要到[第四课](04-jobs.md)再引入状态与存储。
+这里的 goroutine 用于运行 HTTP 服务并等待退出；后台 goroutine 本身不等于可靠任务系统。返回 202 后可查询、重启后可恢复的后台任务，要到[第五课](05-jobs.md)再引入状态与存储。
 
 ## 14. 对照源码运行：观察轮转与 fallback
 
@@ -925,9 +927,9 @@ curl -N -i http://localhost:8080/v1/chat/completions \
 
 | 操作 | 预期 | 回到哪里看代码 |
 | --- | --- | --- |
-| 两个主端点分别重启为 `go run ./cmd/mock-provider -addr localhost:9090 -status 503` 和 `-addr localhost:9091 -status 503` | 主组用尽后成功走 backup；响应头显示 `demo-backup-small` | `Open` 的状态检查；`Do` 的组循环与 `retryable` |
+| 两个主端点分别重启为 `go run ./cmd/mock-provider -addr localhost:9090 -status 503` 和 `-addr localhost:9091 -status 503` | 主组用尽后成功走 Google；响应头显示 `Gemini Flash-Lite` | `Open` 的状态检查；`Do` 的组循环与 `retryable` |
 | 再把两个主端点的 `-status 503` 改为 `-status 400` | 返回 400，不调用备用模型 | `retryable` 的不可重试分支；`executionError` 的状态映射 |
-| 把请求中的 `model` 改为 `demo-small` | 返回 400；入站必须是逻辑档次 | `ParseRequest` 的 Tier 校验 |
+| 把请求中的 `model` 改为 `Luna` | 返回 400；入站必须是逻辑档次 | `ParseRequest` 的 Tier 校验 |
 
 更细的首块、取消和协议边界可直接对照现有 [gateway_test.go](../lessons/02-routing/internal/gateway/gateway_test.go)：
 

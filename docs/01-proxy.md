@@ -692,14 +692,14 @@ UPSTREAM_URL=http://localhost:9090/v1 UPSTREAM_API_KEY=demo-only go run .
 curl -i -sS -w '\n首字节：%{time_starttransfer}s，总耗时：%{time_total}s\n' \
   http://localhost:8081/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"demo-small","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":false}'
+  -d '{"model":"Luna","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":false}'
 ```
 
 ```sh
 curl -N -i -sS -w '\n首字节：%{time_starttransfer}s，总耗时：%{time_total}s\n' \
   http://localhost:8081/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"demo-small","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":true}'
+  -d '{"model":"Luna","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":true}'
 ```
 
 按这些参数运行时，应观察到下面的结果，实际值会有网络和调度开销：

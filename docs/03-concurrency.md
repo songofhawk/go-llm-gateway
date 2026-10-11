@@ -20,11 +20,13 @@ A 正在输出，B 和 C 正在等下一块数据，三个都还没有结束，�
 
 ## 三层容量
 
-1. HTTP 入口在读取 body 前限制同时处理的请求数，防止并发上传占用无限缓冲。本课容量为流式配额 + 一次性配额；第 4 课加入任务接口后再增加 32 个入口余量。
-2. 前台 SSE 和一次性调用分别有容量，默认各 64；第 4 课再增加固定后台 worker。满载返回 503 和 Retry-After，而不是在内存排无界队列。
-3. 每个供应商实例有共享容量，覆盖它的全部模型；第 4 课的后台调用也会共享这一容量。槽位从发送请求前占用，到响应体读取完成或关闭才归还。
+1. HTTP 入口在读取 body 前限制同时处理的请求数，防止并发上传占用无限缓冲。本课容量为流式配额 + 一次性配额；第 5 课加入任务接口后再增加 32 个入口余量。
+2. 前台 SSE 和一次性调用分别有容量，默认各 64；第 5 课再增加固定后台 worker。满载返回 503 和 Retry-After，而不是在内存排无界队列。
+3. 每个供应商实例有共享容量，覆盖它的全部模型；第 5 课的后台调用也会共享这一容量。槽位从发送请求前占用，到响应体读取完成或关闭才归还。
 
-这些上限限制应用中的昂贵工作，并不限制操作系统接受的全部连接。公网抗大量慢连接仍要由反向代理/连接限制承担。入口分池也不代表供应商公平分配；第 4 课加入后台工作后，前后台会共享端点容量，生产可进一步增加保留配额或公平队列。
+这些上限限制应用中的昂贵工作，并不限制操作系统接受的全部连接。公网抗大量慢连接仍要由反向代理/连接限制承担。入口分池也不代表供应商公平分配；第 5 课加入后台工作后，前后台会共享端点容量，生产可进一步增加保留配额或公平队列。
+
+本课仍按请求分配负载，没有保证同一会话始终选择同一上游；第 4 课会加入固定首选的会话软粘性。
 
 `Gateway.acquire` 用一把短锁同时完成“选择最少占用端点”和“计数 +1”。若先解锁再加一，两个请求可能同时看见最后一个空位，造成超卖。锁不覆盖 HTTP I/O、body 读取或数据库操作。
 
@@ -75,8 +77,8 @@ A 正在输出，B 和 C 正在等下一块数据，三个都还没有结束，�
 | provider 名额 | Gateway.acquire | 失败尝试立即释放；流式由 Result.Body.Close 释放 |
 | 上游响应体 | Provider.Open | Gateway 失败时或 Result.Body.Close |
 | context 定时器 | Gateway.Do | 失败路径/一次性结束/流式 Close |
-| worker goroutine（第 4 课） | Store.Run | cancel 通知、WaitGroup 等待 |
-| 数据库事务（第 4 课） | 短小 SQL 操作 | commit 或 rollback，绝不包住网络生成 |
+| worker goroutine（第 5 课） | Store.Run | cancel 通知、WaitGroup 等待 |
+| 数据库事务（第 5 课） | 短小 SQL 操作 | commit 或 rollback，绝不包住网络生成 |
 
 `Close` 使用 `sync.Once`，防止正常 defer 与错误清理双重释放。客户端断连沿 `r.Context()` 取消上游。SSE 一旦输出，错误通过中止连接暴露给客户端；缺少完整 `[DONE]` 被视为截断，不能冒充正常成功。
 
@@ -94,4 +96,4 @@ go test -race -v ./internal/gateway -run 'TestConcurrent|TestCancellation|TestSt
 
 官方语义：[net/http](https://pkg.go.dev/net/http)、[ResponseController](https://pkg.go.dev/net/http#ResponseController)、[context](https://pkg.go.dev/context)、[Go pipeline cancellation](https://go.dev/blog/pipelines)。
 
-下一步：[第 4 步：持久化任务](04-jobs.md)。
+下一步：[第 4 课：会话粘性路由](04-session-affinity.md)。

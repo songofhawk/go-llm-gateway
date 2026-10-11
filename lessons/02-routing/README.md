@@ -12,7 +12,7 @@
 
 网关本身分为两个包：`cmd/gateway` 的 `package main` 负责配置、组装、启动与停机，`internal/gateway` 的 `package gateway` 负责网关功能。三层按文件组织在同一个 `gateway` 包内；Mock 则是另一个目录中的独立 `main` 包。配套教程第 6 节解释拆包原因，以及模块、导入路径、`cmd` / `internal`、导出名称和测试等 Go 规则与约定。
 
-`model=economy` 是客户端提出的逻辑档次；`config.example.json` 把它映射到 `demo-small` 等真实模型。同组先轮转选择一个候选，408/429/5xx 或网络错误可尝试下一个；其他 4xx 直接失败。每个候选最多尝试一次，整个调用和单候选都有时间预算。
+`model=economy` 是客户端提出的逻辑档次；`config.example.json` 把它映射到 OpenAI 的 `Luna`、Anthropic 的 `Haiku` 和 Google 的 `Gemini Flash-Lite` 等模型名称。同组先轮转选择一个候选，408/429/5xx 或网络错误可尝试下一个；其他 4xx 直接失败。每个候选最多尝试一次，整个调用和单候选都有时间预算。
 
 SSE 先读取首块再交给 HTTP 层；首块交付后出现故障就中止，不能拼接备用模型的回答。JSON 在有界缓冲中验证后才交付。这里保留字段透传、连接复用、取消和认证。
 
@@ -71,3 +71,5 @@ curl -N -i http://localhost:8080/v1/chat/completions \
 第 1 课使用一个 main.go 和标准库 ReverseProxy，第 2 课开始拆出 internal/gateway；两者的结构变化较大，按阅读顺序逐个文件对照。
 
 配套原理文档：[第 2 课](../../docs/02-routing.md)。 下一份独立版本：[03-concurrency](../03-concurrency/README.md)。
+
+本课按请求轮转，不保证同一会话选择同一上游；会话粘性在[第 4 课](../04-session-affinity/README.md)加入。

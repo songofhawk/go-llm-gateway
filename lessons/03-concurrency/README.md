@@ -72,4 +72,4 @@ diff -ru lessons/02-routing/internal lessons/03-concurrency/internal
 diff -ru lessons/02-routing/cmd/gateway lessons/03-concurrency/cmd/gateway
 ```
 
-配套原理文档：[第 3 课](../../docs/03-concurrency.md)。 下一份独立版本：[04-jobs](../04-jobs/README.md)。
+配套原理文档：[第 3 课](../../docs/03-concurrency.md)。 下一份独立版本：[04-session-affinity](../04-session-affinity/README.md)。

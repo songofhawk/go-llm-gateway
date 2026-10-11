@@ -33,11 +33,11 @@ UPSTREAM_URL=http://localhost:9090/v1 UPSTREAM_API_KEY=demo-only go run .
 curl -i -sS -w '\n首字节：%{time_starttransfer}s，总耗时：%{time_total}s\n' \
   http://localhost:8081/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"demo-small","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":false}'
+  -d '{"model":"Luna","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":false}'
 curl -N -i -sS -w '\n首字节：%{time_starttransfer}s，总耗时：%{time_total}s\n' \
   http://localhost:8081/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"model":"demo-small","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":true}'
+  -d '{"model":"Luna","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":true}'
 ```
 
 第一条是一次性响应，第二条是流式响应；后者的 `-N` 会关闭 curl 的输出缓冲，让 `block1`、`block2` 逐块显示。比较两次输出中的首字节时间和总耗时。Mock 默认模拟 5 个生成步骤：一次性模式等约 5 × 700ms 后完整返回，流式模式约 700ms 后先返回第一块，再逐块输出；总生成时间接近。第 1 课只有一个 Mock 端点，默认网关端口是 8081。

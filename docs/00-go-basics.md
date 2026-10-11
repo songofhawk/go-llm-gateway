@@ -193,7 +193,7 @@ POST /v1/chat/completions HTTP/1.1
 Host: localhost:8081
 Content-Type: application/json
 
-{"model":"demo-small","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":false}
+{"model":"Luna","messages":[{"role":"user","content":"介绍一下 Go"}],"stream":false}
 ```
 
 | 部分 | 例子 | 用途 |

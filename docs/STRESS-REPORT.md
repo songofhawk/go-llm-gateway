@@ -144,7 +144,7 @@ HTTP_PROTOCOL=http1 SCENARIOS=cancel CANCEL_CONCURRENCY=64 STRESS_DURATION=60s b
 
 ## 复现、产物与验证
 
-执行 [scripts/stress.sh](../scripts/stress.sh)，步骤及指标解释见 [第六课](06-pprof.md)。默认七场景全部运行；`SCENARIOS='jobs timeout'` 可以只运行指定部分，`FALLBACK_CONCURRENCY=64` 可以观察备用容量不足。
+执行 [scripts/stress.sh](../scripts/stress.sh)，步骤及指标解释见 [第七课](07-pprof.md)。默认七场景全部运行；`SCENARIOS='jobs timeout'` 可以只运行指定部分，`FALLBACK_CONCURRENCY=64` 可以观察备用容量不足。
 
 报告使用了多轮采集：正常一次性/长流来自首轮；超载来自修正负载连接池后的轮次；取消保留 IPv4 故障复现；jobs/timeout 单独隔离采集；fallback 有余量的最终轮次使用最终网关实现。没有把早期失败轮次删掉或混成一次全部通过的结果。
 

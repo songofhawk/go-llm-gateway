@@ -1,31 +1,43 @@
 # 独立课程拆分验收
 
-2026-10-07，在 Go 1.27.1 / darwin arm64 环境检查。
+当前八课版本于 2026-10-11，在 Go 1.27.1 / darwin arm64 环境检查。2026-10-07 的原七课拆分检查保留在下方历史记录中；旧课引用已映射为顺延后的路径。
 
 ## 代码边界
 
-每课有自己的 go.mod、源码和 Mock；第 2 课起有本课配置，第 4 课起有 SQLite 依赖及 go.sum。各课没有 replace、go.work 或对根目录/其他课程的代码引用。
+每课有自己的 go.mod、源码和 Mock；第 2 课起有本课配置，第 5 课起有 SQLite 依赖及 go.sum。各课没有 replace、go.work 或对根目录/其他课程的代码引用。
 
 | 课程 | 顶层测试数 | 本课边界 |
 | --- | ---: | --- |
 | 01-proxy | 7 | 标准库 ReverseProxy，没有路由模块 |
 | 02-routing | 21 | 轮转、映射、fallback；没有容量门、SQLite、pprof、h2c、令牌桶 |
 | 03-concurrency | 25 | 增加容量、按负载选择、读写时限；没有后台任务 |
-| 04-jobs | 37 | 增加 SQLite 和 worker；没有诊断与速率桶 |
-| 05-labs | 37 | 业务源码与第 4 课一致，增加 scripts/labs.sh |
-| 06-pprof | 48 | 增加 pprof、loadtest、stress.sh、可选 h2c；没有速率桶 |
-| 07-rate-limiting | 57 | 增加令牌桶、入口 429 和 rate/burst 参数 |
+| 04-session-affinity | 35 | 增加会话软粘性、稳定哈希与字段隔离；没有 SQLite 或 worker |
+| 05-jobs | 48 | 增加 SQLite 和 worker；没有诊断与速率桶 |
+| 06-labs | 48 | 业务源码与第 5 课一致，增加 scripts/labs.sh |
+| 07-pprof | 59 | 增加 pprof、loadtest、stress.sh、可选 h2c；没有速率桶 |
+| 08-rate-limiting | 68 | 增加令牌桶、入口 429 和 rate/burst 参数 |
 
 测试数包含各课自己的 Mock 测试，不含状态码等子用例；相同测试会在不同独立版本中重复存在。
 
-## 已执行的检查
+## 2026-10-11：新增会话课与八课回归
+
+- 八课普通测试、竞态检测、构建、静态检查通过：`bash scripts/verify-lessons.sh`、`race`、`build`、`vet`。
+- 根目录完整实现的全量普通测试、竞态检测、`go vet ./...` 和 `go build ./...` 通过。
+- 新增 10 项会话测试，在第 4～8 课累计；第 5～8 课再增加 1 项 HTTP 提交、SQLite 重开、worker 执行的会话持久化集成测试。完整实现包含同样的 11 项测试。
+- 会话键校验、其他流量干扰、候选重排、新实例、实际模型、不同键分散、满载临时切换及恢复、429/500/400、有限 fallback、并发容量和 JSON/SSE 字段隔离均覆盖。
+- 候选增删测试验证新增上游只接收迁移到它的会话，删除上游不改变原先选中其他候选的会话。补充该测试后，再对根目录及第 4～8 课执行会话竞态测试。
+- 第 1～3 课源码未引入会话机制；第 4 课保持标准库且没有后台任务。第 5、6 课的业务源码和测试仍一致。
+- 教程、课程源码和图片的 225 个本地 Markdown 引用存在（历史视频构建产物不在本次检查范围）。新图和顺延图的 SVG XML 解析通过；新图渲染为 PNG 后检查了文字和布局。
+- Go 格式、shell 语法及 `git diff --check` 通过。本轮没有重跑历史压力测试，也没有用 Mock 声称验证真实模型缓存收益。
+
+## 2026-10-07：历史七课拆分检查（不含新增会话课）
 
 - 七课的普通测试全部通过：`bash scripts/verify-lessons.sh`。
 - 七课的竞态检测全部通过：`bash scripts/verify-lessons.sh race`。
 - 根目录完整参考实现的 `go test -timeout 60s ./...` 通过。
-- 分别构建并启动七课自己的 Mock 和网关，使用临时配置/端口验证 JSON 和完整 SSE；第 4～7 课验证任务提交、查询至 done；第 6～7 课验证独立诊断端口。
-- 第 5 课 `bash scripts/labs.sh all` 全部实验通过，包括取消、容量、超时、截断、慢客户端和恢复。
-- 第 6 课实际运行 1 秒 unary 负载和 pprof 采样，脚本成功结束，生成结果 JSON、CPU/heap/goroutine/block/mutex 原始采样与文本分析。
+- 分别构建并启动七课自己的 Mock 和网关，使用临时配置/端口验证 JSON 和完整 SSE；第 5～8 课验证任务提交、查询至 done；第 7～8 课验证独立诊断端口。
+- 第 6 课 `bash scripts/labs.sh all` 全部实验通过，包括取消、容量、超时、截断、慢客户端和恢复。
+- 第 7 课实际运行 1 秒 unary 负载和 pprof 采样，脚本成功结束，生成结果 JSON、CPU/heap/goroutine/block/mutex 原始采样与文本分析。
 - 检查课程和教程中的新增本地 Markdown 链接，目标存在；脚本通过 bash 语法检查；课程 Go 源码符合 gofmt。
 
 ## 运行方式变化

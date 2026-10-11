@@ -1,0 +1,21 @@
+{
+  "endpoints": [
+    {"name":"OpenAI", "base_url":"http://localhost:9090/v1", "api_key_env":"", "capacity":64},
+    {"name":"Anthropic", "base_url":"http://localhost:9091/v1", "api_key_env":"", "capacity":64},
+    {"name":"Google", "base_url":"http://localhost:9092/v1", "api_key_env":"", "capacity":32}
+  ],
+  "routes": {
+    "economy": [
+      [{"provider":"OpenAI","model":"Luna"},{"provider":"Anthropic","model":"Haiku"}],
+      [{"provider":"Google","model":"Gemini Flash-Lite"}]
+    ],
+    "balanced": [
+      [{"provider":"OpenAI","model":"Terra"},{"provider":"Anthropic","model":"Sonnet"}],
+      [{"provider":"Google","model":"Gemini Flash"}]
+    ],
+    "powerful": [
+      [{"provider":"OpenAI","model":"Sol"},{"provider":"Anthropic","model":"Opus"}],
+      [{"provider":"Google","model":"Gemini Pro"}]
+    ]
+  }
+}

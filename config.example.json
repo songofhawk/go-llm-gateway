@@ -1,21 +1,21 @@
 {
   "endpoints": [
-    {"name":"primary-a", "base_url":"http://localhost:9090/v1", "api_key_env":"", "capacity":64},
-    {"name":"primary-b", "base_url":"http://localhost:9091/v1", "api_key_env":"", "capacity":64},
-    {"name":"backup", "base_url":"http://localhost:9092/v1", "api_key_env":"", "capacity":32}
+    {"name":"OpenAI", "base_url":"http://localhost:9090/v1", "api_key_env":"", "capacity":64},
+    {"name":"Anthropic", "base_url":"http://localhost:9091/v1", "api_key_env":"", "capacity":64},
+    {"name":"Google", "base_url":"http://localhost:9092/v1", "api_key_env":"", "capacity":32}
   ],
   "routes": {
     "economy": [
-      [{"provider":"primary-a","model":"demo-small"},{"provider":"primary-b","model":"demo-small"}],
-      [{"provider":"backup","model":"demo-backup-small"}]
+      [{"provider":"OpenAI","model":"Luna"},{"provider":"Anthropic","model":"Haiku"}],
+      [{"provider":"Google","model":"Gemini Flash-Lite"}]
     ],
     "balanced": [
-      [{"provider":"primary-a","model":"demo-medium"},{"provider":"primary-b","model":"demo-medium"}],
-      [{"provider":"backup","model":"demo-backup-medium"}]
+      [{"provider":"OpenAI","model":"Terra"},{"provider":"Anthropic","model":"Sonnet"}],
+      [{"provider":"Google","model":"Gemini Flash"}]
     ],
     "powerful": [
-      [{"provider":"primary-a","model":"demo-large"},{"provider":"primary-b","model":"demo-large"}],
-      [{"provider":"backup","model":"demo-backup-large"}]
+      [{"provider":"OpenAI","model":"Sol"},{"provider":"Anthropic","model":"Opus"}],
+      [{"provider":"Google","model":"Gemini Pro"}]
     ]
   }
 }

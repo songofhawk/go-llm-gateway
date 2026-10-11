@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 GO="${GO:-go}"
 case "${1:-test}" in test|race|build|vet) mode="${1:-test}" ;; *) echo '用法：bash scripts/verify-lessons.sh [test|race|build|vet]' >&2; exit 2 ;; esac
-for lesson in lessons/0[1-7]-*/; do
+for lesson in lessons/0[1-8]-*/; do
   printf '\n课程：%s（%s）\n' "$lesson" "$mode"
   (
     cd "$lesson"

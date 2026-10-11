@@ -1,0 +1,30 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontFamily: Arial, PingFang SC, Microsoft YaHei, sans-serif
+    primaryColor: '#eef4fa'
+    primaryTextColor: '#203247'
+    primaryBorderColor: '#8496ab'
+    lineColor: '#6b7d91'
+  flowchart:
+    htmlLabels: false
+---
+flowchart TD
+    R["请求：档次 + 可选 gateway_session"] --> S{"有会话键？"}
+    S -->|有| H["组内稳定哈希<br/>首选供应商与真实模型"]
+    S -->|无| L["按占用比例选候选<br/>并列时轮转"]
+    H --> C{"首选未尝试且有容量？<br/>共享锁内检查"}
+    C -->|是| P["选择首选并占位"]
+    C -->|否| L
+    L --> E{"本组还有可用候选？"}
+    E -->|有| O["选择其他候选并占位"]
+    E -->|无| N["下一组<br/>全部耗尽则返回错误"]
+    P --> U["移除网关字段<br/>调用上游，有限 fallback<br/>响应体关闭后释放名额"]
+    O --> U
+    classDef input fill:#eaf6f1,stroke:#49a58d,color:#203247
+    classDef route fill:#f0edfa,stroke:#9984bf,color:#203247
+    classDef upstream fill:#fff4df,stroke:#cda45d,color:#203247
+    class R input
+    class H,C,L,E,P,O route
+    class U upstream
