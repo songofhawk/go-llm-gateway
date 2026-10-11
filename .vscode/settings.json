@@ -5,6 +5,14 @@
         "/^if command -v code >/dev/null 2>&1; then code --list-extensions --show-versions; else printf 'code CLI not found\\\\n'; fi; if \\[ -x \"\\$\\(go env GOPATH\\)/bin/gopls\" \\]; then \"\\$\\(go env GOPATH\\)/bin/gopls\" version; else printf 'gopls binary not installed\\\\n'; fi$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^bash scripts/verify-lessons\\.sh$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \\.\\./\\.\\. && bash scripts/verify-lessons\\.sh$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

@@ -404,8 +404,8 @@ flowchart TB
     M --> A["api · *API<br/>方法：chat(w, r)"]
     A -->|"Gateway 字段：*Gateway"| G["g · *Gateway<br/>Do / choose；routes / cursor"]
     G -->|"backends[name].provider<br/>类型：Provider 接口"| P["*OpenAIProvider<br/>实现 Open(ctx, model, r)"]
-    P -->|"Client 字段"| C["共享 *http.Client"]
-    C -->|"Transport 字段"| T["*http.Transport<br/>连接池与 RoundTrip"]
+    P -->|"Client 字段"| C["共享 *http.Client<br/>Transport 字段：http.RoundTripper"]
+    C -->|"实际传入"| T["*http.Transport<br/>实现 http.RoundTripper<br/>连接池与 RoundTrip"]
     CFG["Config.Routes<br/>逻辑档次 → 候选组 → Target"] --> G
     classDef client fill:#E7F3EF,stroke:#448675,color:#234B42;
     classDef http fill:#EAF0FA,stroke:#6285B7,color:#29466D;
@@ -420,6 +420,10 @@ flowchart TB
 [查看 Mermaid 源图](diagrams/02-objects.mmd)
 
 蓝色表示 HTTP 入口，紫色表示路由，暖金表示配置和上游调用。图中箭头标出的字段与接口，是从一个对象找到下一个对象的路径。
+
+`http.Client.Transport` 字段的类型是 `http.RoundTripper`：它是“执行一次 HTTP 请求并返回响应”的接口。这里实际传入的是 `*http.Transport`，它实现了这个接口。`Client.Do` 负责较高层的请求行为并调用 `RoundTrip`；连接池、连接复用以及需要时建立连接，由 `Transport` 负责。同一个 Client/Transport 用于多个请求时，才能共享这份连接池。
+
+第一课的 `httputil.ReverseProxy` 也通过 `http.RoundTripper` 接口调用上游；区别是它直接持有 Transport 并调用 `RoundTrip`，不经过 `http.Client`。因此，两课中的 `Transport` 都是接口的具体实现，只是调用它的上层对象不同。
 
 和第一课的 `gateway.proxy http.Handler` 相似，`backend.provider Provider` 保存接口值，实际装进去的是 `*OpenAIProvider`。`func (p *OpenAIProvider) Open(...)` 的签名满足接口，因此可以赋给 `Provider`，无需显式声明“实现接口”。`Do` 调用 `b.provider.Open(...)` 时，Go 会执行里面具体对象的 `Open` 方法。
 
