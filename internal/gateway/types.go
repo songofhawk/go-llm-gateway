@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -21,9 +22,10 @@ var (
 // Request 保留工具调用、多模态等原始 JSON 字段，只解析网关必须理解的字段。
 // model 是逻辑档次 economy / balanced / powerful，真正的模型 ID 由配置决定。
 type Request struct {
-	Tier   string
-	Stream bool
-	Fields map[string]json.RawMessage
+	Tier    string
+	Stream  bool
+	Session string // gateway_session：调用方提供的命名空间内唯一会话键，仅用于网关路由。
+	Fields  map[string]json.RawMessage
 }
 
 func ParseRequest(data []byte) (Request, error) {
@@ -31,6 +33,12 @@ func ParseRequest(data []byte) (Request, error) {
 	if err := json.Unmarshal(data, &r.Fields); err != nil || r.Fields == nil {
 		return r, fmt.Errorf("%w: expected JSON object", ErrInvalid)
 	}
+	if v, ok := r.Fields["gateway_session"]; ok {
+		if bytes.Equal(v, []byte("null")) || json.Unmarshal(v, &r.Session) != nil || strings.TrimSpace(r.Session) == "" || len(r.Session) > 256 {
+			return r, fmt.Errorf("%w: gateway_session must be a nonblank string of at most 256 bytes", ErrInvalid)
+		}
+	}
+
 	r.Tier = "balanced"
 	if v, ok := r.Fields["model"]; ok {
 		if bytes.Equal(v, []byte("null")) {

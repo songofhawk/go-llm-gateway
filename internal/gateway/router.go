@@ -67,8 +67,9 @@ func New(config Config, providers map[string]Provider, times Timeouts) (*Gateway
 	return g, nil
 }
 
-// acquire 选择占用比例最低的端点；并列时轮转，选择与占位在同一临界区。
-func (g *Gateway) acquire(group []Target, tried map[Target]bool) (Target, *backend, func(), bool) {
+// acquire 优先使用会话首选；不可用时按占用比例选择，并列时轮转。
+// 选择与占位在同一临界区；首选的哈希计算在锁外完成。
+func (g *Gateway) acquire(group []Target, tried map[Target]bool, preferred Target) (Target, *backend, func(), bool) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	var chosen Target
@@ -79,6 +80,10 @@ func (g *Gateway) acquire(group []Target, tried map[Target]bool) (Target, *backe
 		b := g.backends[t.Provider]
 		if tried[t] || b.active >= b.capacity {
 			continue
+		}
+		if t == preferred {
+			chosen, selected = t, b
+			break
 		}
 		if selected == nil || float64(b.active)/float64(b.capacity) < float64(selected.active)/float64(selected.capacity) {
 			chosen, selected = t, b
@@ -153,11 +158,12 @@ func (g *Gateway) Do(ctx context.Context, r Request) (*Result, error) {
 	tried := map[Target]bool{}
 	var last error
 	for _, group := range groups {
+		preferred := sessionTarget(group, r)
 		for {
 			if err := overall.Err(); err != nil {
 				return nil, err
 			}
-			target, b, release, ok := g.acquire(group, tried)
+			target, b, release, ok := g.acquire(group, tried, preferred)
 			if !ok {
 				break
 			}

@@ -70,6 +70,9 @@ func (p *OpenAIProvider) Open(ctx context.Context, model string, r Request) (io.
 	// 复制 map，避免并发修改用户请求或污染下一个 fallback 的模型参数。
 	fields := make(map[string]json.RawMessage, len(r.Fields)+1)
 	for k, v := range r.Fields {
+		if k == "gateway_session" {
+			continue // 网关扩展字段不属于供应商协议。
+		}
 		fields[k] = v
 	}
 	fields["model"], _ = json.Marshal(model)
