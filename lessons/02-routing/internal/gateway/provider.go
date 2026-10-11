@@ -22,7 +22,7 @@ type OpenAIProvider struct {
 	Client *http.Client
 }
 
-// 复用上游连接，避免每个请求都重新建连。空闲连接上限不等于活跃请求上限。
+// 配置 Transport 的连接池供后续请求复用。空闲连接上限不等于活跃请求上限。
 func NewHTTPClient(headerTimeout time.Duration, idleCapacity int) *http.Client {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.DialContext = (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext
